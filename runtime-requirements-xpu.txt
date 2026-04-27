@@ -1,0 +1,26 @@
+# XPU Runtime Dependencies
+# Use: uv pip install -r runtime-requirements-xpu.txt --python runtime\xpu\Scripts\python.exe
+
+# PyTorch XPU (must install separately with index-url first)
+# uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/xpu
+
+# Core Dependencies
+filelock>=3.25.0
+fsspec>=2026.2.0
+jinja2>=3.1.0
+markupsafe>=3.0.0
+mpmath>=1.3.0
+networkx>=3.6.0
+numpy>=2.4.0
+pillow>=12.1.0
+setuptools>=70.0.0
+sympy>=1.14.0
+typing-extensions>=4.15.0
+
+# XPU-Specific Dependencies (auto-installed with torch+xpu)
+# intel-extension-for-pytorch (optional, for performance)
+# triton-xpu
+
+# GUI Dependencies (if needed for XPU version)
+# PyQt6>=6.11.0
+# loguru>=0.7.0

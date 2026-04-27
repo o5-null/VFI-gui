@@ -1,0 +1,34 @@
+# CUDA Runtime Dependencies
+# Use: uv pip install -r runtime-requirements-cuda.txt --python runtime\cuda\Scripts\python.exe
+
+# PyTorch CUDA (must install separately with index-url first)
+# uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+
+# Core Dependencies
+filelock>=3.25.0
+fsspec>=2026.2.0
+jinja2>=3.1.0
+markupsafe>=3.0.0
+mpmath>=1.3.0
+networkx>=3.6.0
+numpy>=2.4.0
+pillow>=12.1.0
+setuptools>=70.0.0
+sympy>=1.14.0
+typing-extensions>=4.15.0
+
+# CUDA-Specific Dependencies
+tensorrt>=10.0.0
+onnxruntime>=1.24.0
+opencv-python>=4.13.0
+PyQt6>=6.11.0
+vapoursynth>=74
+einops>=0.8.0
+loguru>=0.7.0
+rich>=15.0.0
+tqdm>=4.67.0
+protobuf>=7.0.0
+
+# Optional: VapourSynth plugins
+# vsmlrt-script
+# vsrepo

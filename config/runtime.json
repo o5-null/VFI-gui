@@ -1,0 +1,14 @@
+{
+  "pipeline": null,
+  "output": null,
+  "vapoursynth": null,
+  "paths": null,
+  "ui": null,
+  "_metadata": {
+    "version": "1.0",
+    "export_type": "runtime",
+    "export_date": "2026-04-27T13:31:42.985165",
+    "description": "",
+    "source_app": "VFI-gui"
+  }
+}
