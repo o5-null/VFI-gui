@@ -1,0 +1,821 @@
+# VFI-gui Translation Template
+# Copyright (C) 2025 VFI-gui Project
+# This file is distributed under the MIT License.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: VFI-gui 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-20 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+# =============================================================================
+# Application
+# =============================================================================
+msgid "VFI-gui - Video Frame Interpolation"
+msgstr ""
+
+msgid "Video Frame Interpolation GUI"
+msgstr ""
+
+msgid "Version {}"
+msgstr ""
+
+# =============================================================================
+# Menu - File
+# =============================================================================
+msgid "&File"
+msgstr ""
+
+msgid "&Open Video..."
+msgstr ""
+
+msgid "Open &Folder..."
+msgstr ""
+
+msgid "&Add to Queue"
+msgstr ""
+
+msgid "&Save Settings"
+msgstr ""
+
+msgid "E&xit"
+msgstr ""
+
+# =============================================================================
+# Menu - Edit
+# =============================================================================
+msgid "&Edit"
+msgstr ""
+
+msgid "&Clear Queue"
+msgstr ""
+
+# =============================================================================
+# Menu - Tools
+# =============================================================================
+msgid "&Tools"
+msgstr ""
+
+msgid "&Model Manager..."
+msgstr ""
+
+# =============================================================================
+# Menu - Help
+# =============================================================================
+msgid "&Help"
+msgstr ""
+
+msgid "&About"
+msgstr ""
+
+msgid "About VFI-gui"
+msgstr ""
+
+msgid "A PyQt6 desktop application for VSGAN-tensorrt-docker video processing workflow."
+msgstr ""
+
+msgid "Supports RIFE interpolation, ESRGAN/CUGAN upscaling, and scene detection."
+msgstr ""
+
+# =============================================================================
+# Menu - Language
+# =============================================================================
+msgid "&Language"
+msgstr ""
+
+msgid "English"
+msgstr ""
+
+msgid "Simplified Chinese"
+msgstr ""
+
+msgid "Traditional Chinese"
+msgstr ""
+
+# =============================================================================
+# Toolbar
+# =============================================================================
+msgid "Main Toolbar"
+msgstr ""
+
+msgid "Open"
+msgstr ""
+
+msgid "Open a video file"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "Start processing"
+msgstr ""
+
+msgid "Pause"
+msgstr ""
+
+msgid "Pause processing"
+msgstr ""
+
+msgid "Resume"
+msgstr ""
+
+msgid "Add to Queue"
+msgstr ""
+
+msgid "Add current video to batch queue"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Cancel processing"
+msgstr ""
+
+# =============================================================================
+# Video Input Widget
+# =============================================================================
+msgid "Video Input"
+msgstr ""
+
+msgid "Select a video file or drag & drop here..."
+msgstr ""
+
+msgid "Select a video file, image sequence, or drag & drop here..."
+msgstr ""
+
+msgid "Browse..."
+msgstr ""
+
+msgid "Drag & Drop Video Files Here"
+msgstr ""
+
+msgid "Drag & Drop Video Files or Image Sequences Here"
+msgstr ""
+
+msgid "No video selected"
+msgstr ""
+
+msgid "File: {} | Size: {:.1f} MB"
+msgstr ""
+
+msgid "File not found"
+msgstr ""
+
+msgid "Error reading file info"
+msgstr ""
+
+msgid "Video File..."
+msgstr ""
+
+msgid "Image Sequence..."
+msgstr ""
+
+msgid "Select First Image in Sequence"
+msgstr ""
+
+msgid "Image Files (*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.exr *.dpx);;All Files (*)"
+msgstr ""
+
+msgid "Image Sequence: {} frames ({} to {})"
+msgstr ""
+
+# =============================================================================
+# Pipeline Config - Interpolation Tab
+# =============================================================================
+msgid "Interpolation"
+msgstr ""
+
+msgid "Enable RIFE Interpolation"
+msgstr ""
+
+msgid "Interpolation Settings"
+msgstr ""
+
+msgid "Model:"
+msgstr ""
+
+msgid "Multiplier:"
+msgstr ""
+
+msgid "Scale:"
+msgstr ""
+
+msgid "Enable Scene Change Detection (sc=True)"
+msgstr ""
+
+# =============================================================================
+# Pipeline Config - Upscaling Tab
+# =============================================================================
+msgid "Upscaling"
+msgstr ""
+
+msgid "Enable Upscaling"
+msgstr ""
+
+msgid "Upscaling Settings"
+msgstr ""
+
+msgid "Engine:"
+msgstr ""
+
+msgid "(Refresh on model scan)"
+msgstr ""
+
+msgid "Tile Size:"
+msgstr ""
+
+msgid "Auto (0)"
+msgstr ""
+
+msgid "(0 = Auto)"
+msgstr ""
+
+msgid "Overlap:"
+msgstr ""
+
+msgid "GPU Streams:"
+msgstr ""
+
+msgid "(Higher = more VRAM)"
+msgstr ""
+
+# =============================================================================
+# Pipeline Config - Scene Detection Tab
+# =============================================================================
+msgid "Scene Detect"
+msgstr ""
+
+msgid "Enable Scene Detection"
+msgstr ""
+
+msgid "Scene Detection Settings"
+msgstr ""
+
+msgid "Threshold:"
+msgstr ""
+
+msgid "(Higher = less sensitive)"
+msgstr ""
+
+msgid "Use FP16 Precision"
+msgstr ""
+
+msgid "Note: Scene detection identifies shot boundaries to prevent\ninterpolation artifacts during scene transitions."
+msgstr ""
+
+# =============================================================================
+# Pipeline Config - Output Tab
+# =============================================================================
+msgid "Output"
+msgstr ""
+
+msgid "Output Settings"
+msgstr ""
+
+msgid "Codec:"
+msgstr ""
+
+msgid "Quality (CRF/CQ):"
+msgstr ""
+
+msgid "(Lower = better quality)"
+msgstr ""
+
+msgid "Preset:"
+msgstr ""
+
+msgid "Copy Audio Stream"
+msgstr ""
+
+# =============================================================================
+# Progress Panel
+# =============================================================================
+msgid "Progress"
+msgstr ""
+
+msgid "Stage:"
+msgstr ""
+
+msgid "Idle"
+msgstr ""
+
+msgid "Initializing..."
+msgstr ""
+
+msgid "Building pipeline..."
+msgstr ""
+
+msgid "Processing..."
+msgstr ""
+
+msgid "Complete"
+msgstr ""
+
+msgid "FPS:"
+msgstr ""
+
+msgid "ETA:"
+msgstr ""
+
+msgid "Elapsed:"
+msgstr ""
+
+msgid "Log Output"
+msgstr ""
+
+msgid "Clear Log"
+msgstr ""
+
+# =============================================================================
+# Batch Queue Widget
+# =============================================================================
+msgid "Batch Queue"
+msgstr ""
+
+msgid "{} items"
+msgstr ""
+
+msgid "{} pending"
+msgstr ""
+
+msgid "{} done"
+msgstr ""
+
+msgid "{} failed"
+msgstr ""
+
+msgid "Start Batch"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+msgid "Retry"
+msgstr ""
+
+msgid "Path: {}"
+msgstr ""
+
+msgid "Status: {}"
+msgstr ""
+
+msgid "Output: {}"
+msgstr ""
+
+msgid "Error: {}"
+msgstr ""
+
+# =============================================================================
+# Status Messages
+# =============================================================================
+msgid "Ready"
+msgstr ""
+
+msgid "Selected: {}"
+msgstr ""
+
+msgid "Added to queue"
+msgstr ""
+
+msgid "Processing started..."
+msgstr ""
+
+msgid "Processing resumed"
+msgstr ""
+
+msgid "Processing paused"
+msgstr ""
+
+msgid "Processing cancelled"
+msgstr ""
+
+msgid "Processing complete: {}"
+msgstr ""
+
+msgid "Processing failed"
+msgstr ""
+
+msgid "Settings saved"
+msgstr ""
+
+msgid "Added {} videos to queue"
+msgstr ""
+
+# =============================================================================
+# Dialogs
+# =============================================================================
+msgid "No Video"
+msgstr ""
+
+msgid "Please select a video file first."
+msgstr ""
+
+msgid "Cancel Processing"
+msgstr ""
+
+msgid "Are you sure you want to cancel processing?"
+msgstr ""
+
+msgid "Processing Complete"
+msgstr ""
+
+msgid "Output saved to:\n{}"
+msgstr ""
+
+msgid "Processing Error"
+msgstr ""
+
+msgid "An error occurred during processing:\n\n{}"
+msgstr ""
+
+msgid "Processing in Progress"
+msgstr ""
+
+msgid "Processing is still running. Cancel and exit?"
+msgstr ""
+
+msgid "Clear Queue"
+msgstr ""
+
+msgid "Are you sure you want to clear the queue?"
+msgstr ""
+
+msgid "No Videos Found"
+msgstr ""
+
+msgid "No video files found in the selected folder."
+msgstr ""
+
+msgid "Select Video File"
+msgstr ""
+
+msgid "Select Folder with Videos"
+msgstr ""
+
+msgid "Video Files (*.mp4 *.mkv *.avi *.webm *.mov *.flv *.wmv *.ts *.m2ts);;All Files (*)"
+msgstr ""
+
+msgid "Model Manager"
+msgstr ""
+
+msgid "Model manager dialog will be implemented in a future update."
+msgstr ""
+
+# =============================================================================
+# File Dialog Filters
+# =============================================================================
+msgid "Video Files (*.mp4 *.mkv *.avi *.webm *.mov *.flv);;All Files (*)"
+msgstr ""
+
+# =============================================================================
+# RIFE Models
+# =============================================================================
+msgid "4.6"
+msgstr ""
+
+msgid "4.7"
+msgstr ""
+
+msgid "4.18"
+msgstr ""
+
+msgid "4.22"
+msgstr ""
+
+msgid "4.26"
+msgstr ""
+
+msgid "4.26.heavy"
+msgstr ""
+
+# =============================================================================
+# Scene Detection Models
+# =============================================================================
+msgid "EfficientFormerV2-S0 (224px)"
+msgstr ""
+
+msgid "EfficientFormerV2-S0 + RIFE46 Flow"
+msgstr ""
+
+msgid "EfficientNetV2-B0 (256px)"
+msgstr ""
+
+msgid "EfficientNetV2-B0 + RIFE46 Flow"
+msgstr ""
+
+msgid "SwinV2-Small (256px)"
+msgstr ""
+
+msgid "SwinV2-Small + RIFE46 Flow"
+msgstr ""
+
+msgid "EfficientNetV2-B0 (48x27)"
+msgstr ""
+
+msgid "DaViT-Small (256px) - 30k"
+msgstr ""
+
+msgid "DaViT-Small (256px) - 40k"
+msgstr ""
+
+msgid "MaxViTV2-Nano (256px) - 20k"
+msgstr ""
+
+msgid "MaxViTV2-Nano (256px) - 30k"
+msgstr ""
+
+msgid "MaxViTV2-Base (224px)"
+msgstr ""
+
+msgid "MobileViTV2 + RIFE422 + Sobel (Recommended)"
+msgstr ""
+
+msgid "AutoShot (5 images)"
+msgstr ""
+
+msgid "Shift-LPIPS-Alex"
+msgstr ""
+
+msgid "Shift-LPIPS-VGG"
+msgstr ""
+
+msgid "DISTS"
+msgstr ""
+
+# =============================================================================
+# Language Names
+# =============================================================================
+msgid "Language"
+msgstr ""
+
+msgid "Simplified Chinese (简体中文)"
+msgstr ""
+
+msgid "Traditional Chinese (繁體中文)"
+msgstr ""
+
+# =============================================================================
+# Tab Navigation
+# =============================================================================
+msgid "Processing"
+msgstr ""
+
+msgid "Models"
+msgstr ""
+
+msgid "Dependencies"
+msgstr ""
+
+# =============================================================================
+# FFmpeg Manager
+# =============================================================================
+msgid "FFmpeg Status"
+msgstr ""
+
+msgid "Checking..."
+msgstr ""
+
+msgid "Version: -"
+msgstr ""
+
+msgid "Version: {}"
+msgstr ""
+
+msgid "Path: -"
+msgstr ""
+
+msgid "Path: {}"
+msgstr ""
+
+msgid "Installed"
+msgstr ""
+
+msgid "Not Found"
+msgstr ""
+
+msgid "Version: Unknown"
+msgstr ""
+
+msgid "Error: {}"
+msgstr ""
+
+msgid "FFmpeg Configuration"
+msgstr ""
+
+msgid "Custom Path:"
+msgstr ""
+
+msgid "Leave empty to use system PATH"
+msgstr ""
+
+msgid "Detect"
+msgstr ""
+
+msgid "Apply"
+msgstr ""
+
+msgid "Hardware Acceleration"
+msgstr ""
+
+msgid "Available"
+msgstr ""
+
+msgid "Not Available"
+msgstr ""
+
+msgid "Select FFmpeg Executable"
+msgstr ""
+
+msgid "Select FFmpeg Directory"
+msgstr ""
+
+msgid "FFmpeg Not Found"
+msgstr ""
+
+msgid "FFmpeg was not found at the specified path.\\n\\n{}"
+msgstr ""
+
+msgid "Please check the path and try again."
+msgstr ""
+
+msgid "Settings Saved"
+msgstr ""
+
+msgid "FFmpeg path has been updated."
+msgstr ""
+
+# =============================================================================
+# Model Manager Panel
+# =============================================================================
+msgid "Models Directory:"
+msgstr ""
+
+msgid "Import Model..."
+msgstr ""
+
+msgid "Select Model Files"
+msgstr ""
+
+msgid "Model Files (*.onnx *.engine *.pth *.pt *.bin);;All Files (*)"
+msgstr ""
+
+msgid "File Exists"
+msgstr ""
+
+msgid "{} already exists. Overwrite?"
+msgstr ""
+
+msgid "Import Failed"
+msgstr ""
+
+msgid "Failed to import {}: {}"
+msgstr ""
+
+msgid "Import Complete"
+msgstr ""
+
+msgid "Imported {} model(s) to imported/ directory"
+msgstr ""
+
+msgid "Select Models Directory"
+msgstr ""
+
+# =============================================================================
+# Dependency Panel
+# =============================================================================
+msgid "{} management will be added in a future update."
+msgstr ""
+
+msgid "Python/VapourSynth"
+msgstr ""
+
+# =============================================================================
+# Model Manager Status
+# =============================================================================
+msgid "Complete"
+msgstr ""
+
+msgid "Partial"
+msgstr ""
+
+msgid "Empty"
+msgstr ""
+
+msgid "Available"
+msgstr ""
+
+msgid "Other Models"
+msgstr ""
+
+msgid "Model"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Size"
+msgstr ""
+
+msgid "Total: {} models installed, {:.1f} MB"
+msgstr ""
+
+msgid "Browse..."
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "Download All Missing"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Open Folder"
+msgstr ""
+
+msgid "Download"
+msgstr ""
+
+msgid "No Download URL"
+msgstr ""
+
+msgid "No download URL available for this checkpoint."
+msgstr ""
+
+msgid "Download Failed"
+msgstr ""
+
+msgid "Delete Model"
+msgstr ""
+
+msgid "Are you sure you want to delete {}?"
+msgstr ""
+
+msgid "No Missing Models"
+msgstr ""
+
+msgid "All models are already installed."
+msgstr ""
+
+msgid "Download {} missing models?"
+msgstr ""
+
+# =============================================================================
+# Hardware Acceleration
+# =============================================================================
+msgid "NVIDIA NVENC"
+msgstr ""
+
+msgid "Intel Quick Sync"
+msgstr ""
+
+msgid "AMD AMF"
+msgstr ""
+
+msgid "CUDA"
+msgstr ""
+
+msgid "VAAPI"
+msgstr ""
+
+msgid "VideoToolbox"
+msgstr ""
+
+# =============================================================================
+# Download Progress
+# =============================================================================
+msgid "Download cancelled"
+msgstr ""
+
+msgid "Downloading from: {}"
+msgstr ""
+
+msgid "Downloaded: {}"
+msgstr ""
+
+msgid "Failed, trying next mirror..."
+msgstr ""
+
+msgid "Download failed: {}"
+msgstr ""
+
+msgid "Downloading... {}%"
+msgstr ""
+
+# =============================================================================
+# No Models Warning
+# =============================================================================
+msgid "No models installed. Go to Models tab to download."
+msgstr ""

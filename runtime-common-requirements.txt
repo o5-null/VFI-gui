@@ -1,0 +1,39 @@
+# Runtime Common Dependencies
+# These packages are required by both CUDA and XPU runtimes
+# Generated from runtime/cuda and runtime/xpu comparison
+
+# ============================================
+# Core GPU Framework (platform-specific versions)
+# Install with appropriate index URL:
+#   CUDA: --index-url https://download.pytorch.org/whl/cu130
+#   XPU:  --index-url https://download.pytorch.org/whl/xpu
+# ============================================
+torch>=2.11.0
+torchvision>=0.26.0
+torchaudio>=2.11.0
+
+# ============================================
+# Common Python Dependencies
+# These versions are compatible with both runtimes
+# ============================================
+filelock>=3.25.0
+fsspec>=2026.2.0
+jinja2>=3.1.0
+markupsafe>=3.0.0
+mpmath>=1.3.0
+networkx>=3.6.0
+numpy>=2.4.0
+pillow>=12.1.0
+setuptools>=70.0.0
+sympy>=1.14.0
+typing-extensions>=4.15.0
+
+# ============================================
+# Platform-Specific Notes
+# ============================================
+# CUDA additionally requires:
+#   tensorrt, onnxruntime, opencv-python, vapoursynth, pyqt6,
+#   einops, loguru, rich, tqdm, einops, protobuf
+#
+# XPU additionally requires:
+#   intel-*, mkl, triton-xpu, tbb, pyelftools

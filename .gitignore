@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Logs and temporary files
+logs/
+temp/
+*.log
+
+# Output files
+output/
+
+# Models (large files)
+models/
+*.engine
+*.onnx
+*.pth
+*.pt
+*.bin
+
+# Runtime environments
+runtime/
+
+# Graphify analysis
+graphify-out/
+.graphify_analysis.json
+.graphify_ast.json
+.graphify_detect.json
+
+# PyQt/Qt
+*.qm
+*.ui.py
+moc_*.cpp
+ui_*.h
+
+# Translation compiled files (keep source .ts files)
+# locales/*.qm
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.bak
+*.tmp
+
+# Configuration with sensitive data
+# Uncomment if you want to ignore user-specific configs:
+# config/network.json
+
+# Test outputs
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json

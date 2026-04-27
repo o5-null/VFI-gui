@@ -1,0 +1,974 @@
+# VFI-gui Simplified Chinese Translation
+# Copyright (C) 2025 VFI-gui Project
+# This file is distributed under the MIT License.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: VFI-gui 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-20 15:00+0800\n"
+"PO-Revision-Date: 2025-04-20 15:00+0800\n"
+"Last-Translator: VFI-gui Team\n"
+"Language-Team: Simplified Chinese\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# =============================================================================
+# Application
+# =============================================================================
+msgid "VFI-gui - Video Frame Interpolation"
+msgstr "VFI-gui - 视频帧插值"
+
+msgid "Video Frame Interpolation GUI"
+msgstr "视频帧插值图形界面"
+
+msgid "Version {}"
+msgstr "版本 {}"
+
+# =============================================================================
+# Menu - File
+# =============================================================================
+msgid "&File"
+msgstr "文件(&F)"
+
+msgid "&Open Video..."
+msgstr "打开视频(&O)..."
+
+msgid "Open &Folder..."
+msgstr "打开文件夹(&F)..."
+
+msgid "&Add to Queue"
+msgstr "添加到队列(&A)"
+
+msgid "&Save Settings"
+msgstr "保存设置(&S)"
+
+msgid "E&xit"
+msgstr "退出(&X)"
+
+# =============================================================================
+# Menu - Edit
+# =============================================================================
+msgid "&Edit"
+msgstr "编辑(&E)"
+
+msgid "&Clear Queue"
+msgstr "清空队列(&C)"
+
+# =============================================================================
+# Menu - Tools
+# =============================================================================
+msgid "&Tools"
+msgstr "工具(&T)"
+
+msgid "&Model Manager..."
+msgstr "模型管理器(&M)..."
+
+# =============================================================================
+# Menu - Help
+# =============================================================================
+msgid "&Help"
+msgstr "帮助(&H)"
+
+msgid "&About"
+msgstr "关于(&A)"
+
+msgid "About VFI-gui"
+msgstr "关于 VFI-gui"
+
+msgid "A PyQt6 desktop application for VSGAN-tensorrt-docker video processing workflow."
+msgstr "基于 PyQt6 的 VSGAN-tensorrt-docker 视频处理工作流桌面应用程序。"
+
+msgid "Supports RIFE interpolation, ESRGAN/CUGAN upscaling, and scene detection."
+msgstr "支持 RIFE 插帧、ESRGAN/CUGAN 超分辨率和场景检测。"
+
+# =============================================================================
+# Menu - Language
+# =============================================================================
+msgid "&Language"
+msgstr "语言(&L)"
+
+msgid "English"
+msgstr "English"
+
+msgid "Simplified Chinese"
+msgstr "简体中文"
+
+msgid "Traditional Chinese"
+msgstr "繁體中文"
+
+# =============================================================================
+# Toolbar
+# =============================================================================
+msgid "Main Toolbar"
+msgstr "主工具栏"
+
+msgid "Open"
+msgstr "打开"
+
+msgid "Open a video file"
+msgstr "打开视频文件"
+
+msgid "Start"
+msgstr "开始"
+
+msgid "Start processing"
+msgstr "开始处理"
+
+msgid "Pause"
+msgstr "暂停"
+
+msgid "Pause processing"
+msgstr "暂停处理"
+
+msgid "Resume"
+msgstr "继续"
+
+msgid "Add to Queue"
+msgstr "添加到队列"
+
+msgid "Add current video to batch queue"
+msgstr "将当前视频添加到批处理队列"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Cancel processing"
+msgstr "取消处理"
+
+# =============================================================================
+# Video Input Widget
+# =============================================================================
+msgid "Video Input"
+msgstr "视频输入"
+
+msgid "Select a video file or drag & drop here..."
+msgstr "选择视频文件或拖放到此处..."
+
+msgid "Select a video file, image sequence, or drag & drop here..."
+msgstr "选择视频文件、图像序列或拖放到此处..."
+
+msgid "Browse..."
+msgstr "浏览..."
+
+msgid "Drag & Drop Video Files Here"
+msgstr "拖放视频文件到此处"
+
+msgid "Drag & Drop Video Files or Image Sequences Here"
+msgstr "拖放视频文件或图像序列到此处"
+
+msgid "Drag & Drop Video Files, Folders, or Image Sequences Here"
+msgstr "拖放视频文件、文件夹或图像序列到此处"
+
+msgid "Found {} videos, selected: {}"
+msgstr "找到 {} 个视频，已选择: {}"
+
+msgid "No supported files found in folder"
+msgstr "文件夹中未找到支持的文件"
+
+msgid "No video selected"
+msgstr "未选择视频"
+
+msgid "File: {} | Size: {:.1f} MB"
+msgstr "文件: {} | 大小: {:.1f} MB"
+
+msgid "File not found"
+msgstr "文件未找到"
+
+msgid "Error reading file info"
+msgstr "读取文件信息出错"
+
+msgid "Video File..."
+msgstr "视频文件..."
+
+msgid "Image Sequence..."
+msgstr "图像序列..."
+
+msgid "Select First Image in Sequence"
+msgstr "选择序列中的第一张图像"
+
+msgid "Image Files (*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.exr *.dpx);;All Files (*)"
+msgstr "图像文件 (*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.exr *.dpx);;所有文件 (*)"
+
+msgid "Image Sequence: {} frames ({} to {})"
+msgstr "图像序列: {} 帧 ({} 到 {})"
+
+# =============================================================================
+# Pipeline Config - Interpolation Tab
+# =============================================================================
+msgid "Interpolation"
+msgstr "插帧"
+
+msgid "Enable RIFE Interpolation"
+msgstr "启用 RIFE 插帧"
+
+msgid "Interpolation Settings"
+msgstr "插帧设置"
+
+msgid "Model:"
+msgstr "模型:"
+
+msgid "Multiplier:"
+msgstr "倍率:"
+
+msgid "Scale:"
+msgstr "缩放:"
+
+msgid "Enable Scene Change Detection (sc=True)"
+msgstr "启用场景变化检测 (sc=True)"
+
+# =============================================================================
+# Pipeline Config - Upscaling Tab
+# =============================================================================
+msgid "Upscaling"
+msgstr "超分"
+
+msgid "Enable Upscaling"
+msgstr "启用超分辨率"
+
+msgid "Upscaling Settings"
+msgstr "超分辨率设置"
+
+msgid "Engine:"
+msgstr "引擎:"
+
+msgid "(Refresh on model scan)"
+msgstr "(模型扫描时刷新)"
+
+msgid "Tile Size:"
+msgstr "分块大小:"
+
+msgid "Auto (0)"
+msgstr "自动 (0)"
+
+msgid "(0 = Auto)"
+msgstr "(0 = 自动)"
+
+msgid "Overlap:"
+msgstr "重叠:"
+
+msgid "GPU Streams:"
+msgstr "GPU 流数:"
+
+msgid "(Higher = more VRAM)"
+msgstr "(越高占用越多显存)"
+
+# =============================================================================
+# Pipeline Config - Scene Detection Tab
+# =============================================================================
+msgid "Scene Detect"
+msgstr "场景检测"
+
+msgid "Enable Scene Detection"
+msgstr "启用场景检测"
+
+msgid "Scene Detection Settings"
+msgstr "场景检测设置"
+
+msgid "Threshold:"
+msgstr "阈值:"
+
+msgid "(Higher = less sensitive)"
+msgstr "(越高越不敏感)"
+
+msgid "Use FP16 Precision"
+msgstr "使用 FP16 精度"
+
+msgid "Note: Scene detection identifies shot boundaries to prevent\ninterpolation artifacts during scene transitions."
+msgstr "注意: 场景检测用于识别镜头边界，\n防止场景切换时的插帧伪影。"
+
+# =============================================================================
+# Pipeline Config - Output Tab
+# =============================================================================
+msgid "Output"
+msgstr "输出"
+
+msgid "Output Settings"
+msgstr "输出设置"
+
+msgid "Codec:"
+msgstr "编码器:"
+
+msgid "Quality (CRF/CQ):"
+msgstr "质量 (CRF/CQ):"
+
+msgid "(Lower = better quality)"
+msgstr "(越低质量越好)"
+
+msgid "Preset:"
+msgstr "预设:"
+
+msgid "Copy Audio Stream"
+msgstr "复制音频流"
+
+# =============================================================================
+# Progress Panel
+# =============================================================================
+msgid "Progress"
+msgstr "进度"
+
+msgid "Stage:"
+msgstr "阶段:"
+
+msgid "Idle"
+msgstr "空闲"
+
+msgid "Initializing..."
+msgstr "初始化中..."
+
+msgid "Building pipeline..."
+msgstr "构建处理链..."
+
+msgid "Processing..."
+msgstr "处理中..."
+
+msgid "Complete"
+msgstr "完成"
+
+msgid "FPS:"
+msgstr "帧率:"
+
+msgid "ETA:"
+msgstr "预计剩余:"
+
+msgid "Elapsed:"
+msgstr "已用时间:"
+
+msgid "Log Output"
+msgstr "日志输出"
+
+msgid "Clear Log"
+msgstr "清除日志"
+
+# =============================================================================
+# Batch Queue Widget
+# =============================================================================
+msgid "Batch Queue"
+msgstr "批处理队列"
+
+msgid "{} items"
+msgstr "{} 个项目"
+
+msgid "{} pending"
+msgstr "{} 待处理"
+
+msgid "{} done"
+msgstr "{} 已完成"
+
+msgid "{} failed"
+msgstr "{} 失败"
+
+msgid "Start Batch"
+msgstr "开始批处理"
+
+msgid "Clear"
+msgstr "清除"
+
+msgid "Remove"
+msgstr "移除"
+
+msgid "Retry"
+msgstr "重试"
+
+msgid "Path: {}"
+msgstr "路径: {}"
+
+msgid "Status: {}"
+msgstr "状态: {}"
+
+msgid "Output: {}"
+msgstr "输出: {}"
+
+msgid "Error: {}"
+msgstr "错误: {}"
+
+# =============================================================================
+# Status Messages
+# =============================================================================
+msgid "Ready"
+msgstr "就绪"
+
+msgid "Selected: {}"
+msgstr "已选择: {}"
+
+msgid "Added to queue"
+msgstr "已添加到队列"
+
+msgid "Processing started..."
+msgstr "处理已开始..."
+
+msgid "Processing resumed"
+msgstr "处理已继续"
+
+msgid "Processing paused"
+msgstr "处理已暂停"
+
+msgid "Processing cancelled"
+msgstr "处理已取消"
+
+msgid "Processing complete: {}"
+msgstr "处理完成: {}"
+
+msgid "Processing failed"
+msgstr "处理失败"
+
+msgid "Settings saved"
+msgstr "设置已保存"
+
+msgid "Added {} videos to queue"
+msgstr "已添加 {} 个视频到队列"
+
+# =============================================================================
+# Dialogs
+# =============================================================================
+msgid "No Video"
+msgstr "无视频"
+
+msgid "Please select a video file first."
+msgstr "请先选择一个视频文件。"
+
+msgid "Cancel Processing"
+msgstr "取消处理"
+
+msgid "Are you sure you want to cancel processing?"
+msgstr "确定要取消处理吗？"
+
+msgid "Processing Complete"
+msgstr "处理完成"
+
+msgid "Output saved to:\n{}"
+msgstr "输出已保存到:\n{}"
+
+msgid "Processing Error"
+msgstr "处理错误"
+
+msgid "An error occurred during processing:\n\n{}"
+msgstr "处理过程中发生错误:\n\n{}"
+
+msgid "Processing in Progress"
+msgstr "正在处理中"
+
+msgid "Processing is still running. Cancel and exit?"
+msgstr "处理仍在运行。取消并退出？"
+
+msgid "Clear Queue"
+msgstr "清空队列"
+
+msgid "Are you sure you want to clear the queue?"
+msgstr "确定要清空队列吗？"
+
+msgid "No Videos Found"
+msgstr "未找到视频"
+
+msgid "No video files found in the selected folder."
+msgstr "所选文件夹中未找到视频文件。"
+
+msgid "Select Video File"
+msgstr "选择视频文件"
+
+msgid "Select Folder with Videos"
+msgstr "选择包含视频的文件夹"
+
+msgid "Video Files (*.mp4 *.mkv *.avi *.webm *.mov *.flv *.wmv *.ts *.m2ts);;All Files (*)"
+msgstr "视频文件 (*.mp4 *.mkv *.avi *.webm *.mov *.flv *.wmv *.ts *.m2ts);;所有文件 (*)"
+
+msgid "Model Manager"
+msgstr "模型管理器"
+
+msgid "Model manager dialog will be implemented in a future update."
+msgstr "模型管理器对话框将在后续更新中实现。"
+
+# =============================================================================
+# File Dialog Filters
+# =============================================================================
+msgid "Video Files (*.mp4 *.mkv *.avi *.webm *.mov *.flv);;All Files (*)"
+msgstr "视频文件 (*.mp4 *.mkv *.avi *.webm *.mov *.flv);;所有文件 (*)"
+
+# =============================================================================
+# RIFE Models
+# =============================================================================
+msgid "4.6"
+msgstr "4.6"
+
+msgid "4.7"
+msgstr "4.7"
+
+msgid "4.18"
+msgstr "4.18"
+
+msgid "4.22"
+msgstr "4.22"
+
+msgid "4.26"
+msgstr "4.26"
+
+msgid "4.26.heavy"
+msgstr "4.26.heavy"
+
+# =============================================================================
+# Scene Detection Models
+# =============================================================================
+msgid "EfficientFormerV2-S0 (224px)"
+msgstr "EfficientFormerV2-S0 (224px)"
+
+msgid "EfficientFormerV2-S0 + RIFE46 Flow"
+msgstr "EfficientFormerV2-S0 + RIFE46 光流"
+
+msgid "EfficientNetV2-B0 (256px)"
+msgstr "EfficientNetV2-B0 (256px)"
+
+msgid "EfficientNetV2-B0 + RIFE46 Flow"
+msgstr "EfficientNetV2-B0 + RIFE46 光流"
+
+msgid "SwinV2-Small (256px)"
+msgstr "SwinV2-Small (256px)"
+
+msgid "SwinV2-Small + RIFE46 Flow"
+msgstr "SwinV2-Small + RIFE46 光流"
+
+msgid "EfficientNetV2-B0 (48x27)"
+msgstr "EfficientNetV2-B0 (48x27)"
+
+msgid "DaViT-Small (256px) - 30k"
+msgstr "DaViT-Small (256px) - 30k"
+
+msgid "DaViT-Small (256px) - 40k"
+msgstr "DaViT-Small (256px) - 40k"
+
+msgid "MaxViTV2-Nano (256px) - 20k"
+msgstr "MaxViTV2-Nano (256px) - 20k"
+
+msgid "MaxViTV2-Nano (256px) - 30k"
+msgstr "MaxViTV2-Nano (256px) - 30k"
+
+msgid "MaxViTV2-Base (224px)"
+msgstr "MaxViTV2-Base (224px)"
+
+msgid "MobileViTV2 + RIFE422 + Sobel (Recommended)"
+msgstr "MobileViTV2 + RIFE422 + Sobel (推荐)"
+
+msgid "AutoShot (5 images)"
+msgstr "AutoShot (5 张图像)"
+
+msgid "Shift-LPIPS-Alex"
+msgstr "Shift-LPIPS-Alex"
+
+msgid "Shift-LPIPS-VGG"
+msgstr "Shift-LPIPS-VGG"
+
+msgid "DISTS"
+msgstr "DISTS"
+
+# =============================================================================
+# Language Names
+# =============================================================================
+msgid "Language"
+msgstr "语言"
+
+msgid "Simplified Chinese (简体中文)"
+msgstr "简体中文"
+
+msgid "Traditional Chinese (繁體中文)"
+msgstr "繁體中文"
+
+# =============================================================================
+# Tab Navigation
+# =============================================================================
+msgid "Processing"
+msgstr "处理"
+
+msgid "Models"
+msgstr "模型"
+
+msgid "Dependencies"
+msgstr "依赖管理"
+
+# =============================================================================
+# FFmpeg Manager
+# =============================================================================
+msgid "FFmpeg Status"
+msgstr "FFmpeg 状态"
+
+msgid "Checking..."
+msgstr "检测中..."
+
+msgid "Version: -"
+msgstr "版本: -"
+
+msgid "Version: {}"
+msgstr "版本: {}"
+
+msgid "Path: -"
+msgstr "路径: -"
+
+msgid "Path: {}"
+msgstr "路径: {}"
+
+msgid "Installed"
+msgstr "已安装"
+
+msgid "Not Found"
+msgstr "未找到"
+
+msgid "Version: Unknown"
+msgstr "版本: 未知"
+
+msgid "Error: {}"
+msgstr "错误: {}"
+
+msgid "FFmpeg Configuration"
+msgstr "FFmpeg 配置"
+
+msgid "Custom Path:"
+msgstr "自定义路径:"
+
+msgid "Leave empty to use system PATH"
+msgstr "留空则使用系统 PATH"
+
+msgid "Detect"
+msgstr "检测"
+
+msgid "Apply"
+msgstr "应用"
+
+msgid "Hardware Acceleration"
+msgstr "硬件加速"
+
+msgid "Available"
+msgstr "可用"
+
+msgid "Not Available"
+msgstr "不可用"
+
+msgid "Select FFmpeg Executable"
+msgstr "选择 FFmpeg 可执行文件"
+
+msgid "Select FFmpeg Directory"
+msgstr "选择 FFmpeg 目录"
+
+msgid "FFmpeg Not Found"
+msgstr "未找到 FFmpeg"
+
+msgid "FFmpeg was not found at the specified path.\\n\\n{}"
+msgstr "在指定路径未找到 FFmpeg。\\n\\n{}"
+
+msgid "Please check the path and try again."
+msgstr "请检查路径后重试。"
+
+msgid "Settings Saved"
+msgstr "设置已保存"
+
+msgid "FFmpeg path has been updated."
+msgstr "FFmpeg 路径已更新。"
+
+# =============================================================================
+# Model Manager Panel
+# =============================================================================
+msgid "Models Directory:"
+msgstr "模型目录:"
+
+msgid "Import Model..."
+msgstr "导入模型..."
+
+msgid "Select Model Files"
+msgstr "选择模型文件"
+
+msgid "Model Files (*.onnx *.engine *.pth *.pt *.bin);;All Files (*)"
+msgstr "模型文件 (*.onnx *.engine *.pth *.pt *.bin);;所有文件 (*)"
+
+msgid "File Exists"
+msgstr "文件已存在"
+
+msgid "{} already exists. Overwrite?"
+msgstr "{} 已存在。是否覆盖？"
+
+msgid "Import Failed"
+msgstr "导入失败"
+
+msgid "Failed to import {}: {}"
+msgstr "导入 {} 失败: {}"
+
+msgid "Import Complete"
+msgstr "导入完成"
+
+msgid "Imported {} model(s) to imported/ directory"
+msgstr "已导入 {} 个模型到 imported/ 目录"
+
+msgid "Select Models Directory"
+msgstr "选择模型目录"
+
+# =============================================================================
+# Dependency Panel
+# =============================================================================
+msgid "{} management will be added in a future update."
+msgstr "{} 管理将在后续更新中添加。"
+
+msgid "Python/VapourSynth"
+msgstr "Python/VapourSynth"
+
+# =============================================================================
+# Model Manager Status
+# =============================================================================
+msgid "Complete"
+msgstr "完整"
+
+msgid "Partial"
+msgstr "部分"
+
+msgid "Empty"
+msgstr "空"
+
+msgid "Available"
+msgstr "可用"
+
+msgid "Other Models"
+msgstr "其他模型"
+
+msgid "Model"
+msgstr "模型"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Size"
+msgstr "大小"
+
+msgid "Total: {} models installed, {:.1f} MB"
+msgstr "总计: 已安装 {} 个模型，{:.1f} MB"
+
+msgid "Browse..."
+msgstr "浏览..."
+
+msgid "Refresh"
+msgstr "刷新"
+
+msgid "Download All Missing"
+msgstr "下载所有缺失"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Open Folder"
+msgstr "打开文件夹"
+
+msgid "Download"
+msgstr "下载"
+
+msgid "No Download URL"
+msgstr "无下载链接"
+
+msgid "No download URL available for this checkpoint."
+msgstr "此检查点没有可用的下载链接。"
+
+msgid "Download Failed"
+msgstr "下载失败"
+
+msgid "Delete Model"
+msgstr "删除模型"
+
+msgid "Are you sure you want to delete {}?"
+msgstr "确定要删除 {} 吗？"
+
+msgid "No Missing Models"
+msgstr "无缺失模型"
+
+msgid "All models are already installed."
+msgstr "所有模型已安装。"
+
+msgid "Download {} missing models?"
+msgstr "下载 {} 个缺失的模型？"
+
+# =============================================================================
+# Hardware Acceleration
+# =============================================================================
+msgid "NVIDIA NVENC"
+msgstr "NVIDIA NVENC"
+
+msgid "Intel Quick Sync"
+msgstr "Intel Quick Sync"
+
+msgid "AMD AMF"
+msgstr "AMD AMF"
+
+msgid "CUDA"
+msgstr "CUDA"
+
+msgid "VAAPI"
+msgstr "VAAPI"
+
+msgid "VideoToolbox"
+msgstr "VideoToolbox"
+
+# =============================================================================
+# Download Progress
+# =============================================================================
+msgid "Download cancelled"
+msgstr "下载已取消"
+
+msgid "Downloading from: {}"
+msgstr "正在从 {} 下载"
+
+msgid "Downloaded: {}"
+msgstr "已下载: {}"
+
+msgid "Failed, trying next mirror..."
+msgstr "失败，尝试下一个镜像..."
+
+msgid "Download failed: {}"
+msgstr "下载失败: {}"
+
+msgid "Downloading... {}%"
+msgstr "下载中... {}%"
+
+# =============================================================================
+# No Models Warning
+# =============================================================================
+msgid "No models installed. Go to Models tab to download."
+msgstr "未安装模型。请前往模型选项卡下载。"
+
+# =============================================================================
+# Processing Messages (Backend/IO)
+# =============================================================================
+msgid "Input"
+msgstr "输入"
+
+msgid "Backend"
+msgstr "后端"
+
+msgid "Failed to initialize"
+msgstr "初始化失败"
+
+msgid "backend"
+msgstr "后端"
+
+msgid "Saving..."
+msgstr "保存中..."
+
+msgid "Processing time"
+msgstr "处理时间"
+
+msgid "Saving {} frames as {} images..."
+msgstr "正在保存 {} 帧为 {} 图像..."
+
+msgid "Encoding {} frames to video ({})..."
+msgstr "正在编码 {} 帧为视频 ({})..."
+
+msgid "Saved {} images to: {}"
+msgstr "已保存 {} 张图像到: {}"
+
+msgid "Saved video to: {}"
+msgstr "已保存视频到: {}"
+
+msgid "Output Directory"
+msgstr "输出目录"
+
+msgid "Output Subdirectory"
+msgstr "输出子目录"
+
+msgid "Output Filename Pattern"
+msgstr "输出文件名模式"
+
+msgid "Use custom output directory"
+msgstr "使用自定义输出目录"
+
+msgid "Leave empty for default"
+msgstr "留空使用默认值"
+
+msgid "Placeholders: {input} = input filename, {backend} = backend type"
+msgstr "占位符: {input} = 输入文件名, {backend} = 后端类型"
+
+# =============================================================================
+# Proxy Settings
+# =============================================================================
+msgid "&Proxy Settings..."
+msgstr "代理设置(&P)..."
+
+msgid "Proxy Settings"
+msgstr "代理设置"
+
+msgid "Configure proxy settings to accelerate downloads from GitHub and other sites.\nCommon proxy tools: Clash (7890), v2rayN (10808), Shadowsocks (1080)"
+msgstr "配置代理设置以加速从 GitHub 和其他站点的下载。\n常见代理工具: Clash (7890)、v2rayN (10808)、Shadowsocks (1080)"
+
+msgid "Proxy Configuration"
+msgstr "代理配置"
+
+msgid "HTTP Proxy:"
+msgstr "HTTP 代理:"
+
+msgid "HTTPS Proxy:"
+msgstr "HTTPS 代理:"
+
+msgid "No Proxy for:"
+msgstr "不使用代理:"
+
+msgid "e.g., http://127.0.0.1:7890"
+msgstr "例如: http://127.0.0.1:7890"
+
+msgid "e.g., localhost,127.0.0.1,*.local"
+msgstr "例如: localhost,127.0.0.1,*.local"
+
+msgid "Network Settings"
+msgstr "网络设置"
+
+msgid "Download Timeout:"
+msgstr "下载超时:"
+
+msgid " seconds"
+msgstr " 秒"
+
+msgid "Max Retries:"
+msgstr "最大重试次数:"
+
+msgid "Quick Setup:"
+msgstr "快速设置:"
+
+msgid "Clash (7890)"
+msgstr "Clash (7890)"
+
+msgid "v2rayN (10808)"
+msgstr "v2rayN (10808)"
+
+msgid "SS (1080)"
+msgstr "SS (1080)"
+
+msgid "Test Connection"
+msgstr "测试连接"
+
+msgid "Clear"
+msgstr "清除"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Connection Test"
+msgstr "连接测试"
+
+msgid "Successfully connected to GitHub!\nProxy is working correctly."
+msgstr "成功连接到 GitHub!\n代理工作正常。"
+
+msgid "Received status {} from GitHub."
+msgstr "从 GitHub 收到状态 {}。"
+
+msgid "Connection Test Failed"
+msgstr "连接测试失败"
+
+msgid "Failed to connect to GitHub:\n{}"
+msgstr "连接到 GitHub 失败:\n{}"
+
+msgid "Settings Saved"
+msgstr "设置已保存"
+
+msgid "Proxy settings have been saved successfully."
+msgstr "代理设置已成功保存。"
+
+msgid "Warning"
+msgstr "警告"
+
+msgid "Failed to save network settings: {}"
+msgstr "保存网络设置失败: {}"
+
+msgid "Starting download..."
+msgstr "开始下载..."

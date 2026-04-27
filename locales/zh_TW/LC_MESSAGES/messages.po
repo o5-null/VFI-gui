@@ -1,0 +1,650 @@
+# VFI-gui Traditional Chinese Translation
+# Copyright (C) 2025 VFI-gui Project
+# This file is distributed under the MIT License.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: VFI-gui 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-20 15:00+0800\n"
+"PO-Revision-Date: 2025-04-20 15:00+0800\n"
+"Last-Translator: VFI-gui Team\n"
+"Language-Team: Traditional Chinese\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# =============================================================================
+# Application
+# =============================================================================
+msgid "VFI-gui - Video Frame Interpolation"
+msgstr "VFI-gui - 視訊幀插值"
+
+msgid "Video Frame Interpolation GUI"
+msgstr "視訊幀插值圖形介面"
+
+msgid "Version {}"
+msgstr "版本 {}"
+
+# =============================================================================
+# Menu - File
+# =============================================================================
+msgid "&File"
+msgstr "檔案(&F)"
+
+msgid "&Open Video..."
+msgstr "開啟視訊(&O)..."
+
+msgid "Open &Folder..."
+msgstr "開啟資料夾(&F)..."
+
+msgid "&Add to Queue"
+msgstr "加入佇列(&A)"
+
+msgid "&Save Settings"
+msgstr "儲存設定(&S)"
+
+msgid "E&xit"
+msgstr "結束(&X)"
+
+# =============================================================================
+# Menu - Edit
+# =============================================================================
+msgid "&Edit"
+msgstr "編輯(&E)"
+
+msgid "&Clear Queue"
+msgstr "清除佇列(&C)"
+
+# =============================================================================
+# Menu - Tools
+# =============================================================================
+msgid "&Tools"
+msgstr "工具(&T)"
+
+msgid "&Model Manager..."
+msgstr "模型管理器(&M)..."
+
+# =============================================================================
+# Menu - Help
+# =============================================================================
+msgid "&Help"
+msgstr "說明(&H)"
+
+msgid "&About"
+msgstr "關於(&A)"
+
+msgid "About VFI-gui"
+msgstr "關於 VFI-gui"
+
+msgid "A PyQt6 desktop application for VSGAN-tensorrt-docker video processing workflow."
+msgstr "基於 PyQt6 的 VSGAN-tensorrt-docker 視訊處理工作流程桌面應用程式。"
+
+msgid "Supports RIFE interpolation, ESRGAN/CUGAN upscaling, and scene detection."
+msgstr "支援 RIFE 插幀、ESRGAN/CUGAN 超解析度和場景偵測。"
+
+# =============================================================================
+# Menu - Language
+# =============================================================================
+msgid "&Language"
+msgstr "語言(&L)"
+
+msgid "English"
+msgstr "English"
+
+msgid "Simplified Chinese"
+msgstr "简体中文"
+
+msgid "Traditional Chinese"
+msgstr "繁體中文"
+
+# =============================================================================
+# Toolbar
+# =============================================================================
+msgid "Main Toolbar"
+msgstr "主工具列"
+
+msgid "Open"
+msgstr "開啟"
+
+msgid "Open a video file"
+msgstr "開啟視訊檔案"
+
+msgid "Start"
+msgstr "開始"
+
+msgid "Start processing"
+msgstr "開始處理"
+
+msgid "Pause"
+msgstr "暫停"
+
+msgid "Pause processing"
+msgstr "暫停處理"
+
+msgid "Resume"
+msgstr "繼續"
+
+msgid "Add to Queue"
+msgstr "加入佇列"
+
+msgid "Add current video to batch queue"
+msgstr "將目前視訊加入批次佇列"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Cancel processing"
+msgstr "取消處理"
+
+# =============================================================================
+# Video Input Widget
+# =============================================================================
+msgid "Video Input"
+msgstr "視訊輸入"
+
+msgid "Select a video file or drag & drop here..."
+msgstr "選擇視訊檔案或拖放到此處..."
+
+msgid "Browse..."
+msgstr "瀏覽..."
+
+msgid "Drag & Drop Video Files Here"
+msgstr "拖放視訊檔案到此處"
+
+msgid "Drag & Drop Video Files or Image Sequences Here"
+msgstr "拖放視訊檔案或影像序列到此處"
+
+msgid "Drag & Drop Video Files, Folders, or Image Sequences Here"
+msgstr "拖放視訊檔案、資料夾或影像序列到此處"
+
+msgid "Found {} videos, selected: {}"
+msgstr "找到 {} 個視訊，已選擇: {}"
+
+msgid "No supported files found in folder"
+msgstr "資料夾中未找到支援的檔案"
+
+msgid "No video selected"
+msgstr "未選擇視訊"
+
+msgid "File: {} | Size: {:.1f} MB"
+msgstr "檔案: {} | 大小: {:.1f} MB"
+
+msgid "File not found"
+msgstr "檔案未找到"
+
+msgid "Error reading file info"
+msgstr "讀取檔案資訊錯誤"
+
+# =============================================================================
+# Pipeline Config - Interpolation Tab
+# =============================================================================
+msgid "Interpolation"
+msgstr "插幀"
+
+msgid "Enable RIFE Interpolation"
+msgstr "啟用 RIFE 插幀"
+
+msgid "Interpolation Settings"
+msgstr "插幀設定"
+
+msgid "Model:"
+msgstr "模型:"
+
+msgid "Multiplier:"
+msgstr "倍率:"
+
+msgid "Scale:"
+msgstr "縮放:"
+
+msgid "Enable Scene Change Detection (sc=True)"
+msgstr "啟用場景變化偵測 (sc=True)"
+
+# =============================================================================
+# Pipeline Config - Upscaling Tab
+# =============================================================================
+msgid "Upscaling"
+msgstr "超解析度"
+
+msgid "Enable Upscaling"
+msgstr "啟用超解析度"
+
+msgid "Upscaling Settings"
+msgstr "超解析度設定"
+
+msgid "Engine:"
+msgstr "引擎:"
+
+msgid "(Refresh on model scan)"
+msgstr "(模型掃描時重新整理)"
+
+msgid "Tile Size:"
+msgstr "分塊大小:"
+
+msgid "Auto (0)"
+msgstr "自動 (0)"
+
+msgid "(0 = Auto)"
+msgstr "(0 = 自動)"
+
+msgid "Overlap:"
+msgstr "重疊:"
+
+msgid "GPU Streams:"
+msgstr "GPU 串流數:"
+
+msgid "(Higher = more VRAM)"
+msgstr "(越高佔用越多顯存)"
+
+# =============================================================================
+# Pipeline Config - Scene Detection Tab
+# =============================================================================
+msgid "Scene Detect"
+msgstr "場景偵測"
+
+msgid "Enable Scene Detection"
+msgstr "啟用場景偵測"
+
+msgid "Scene Detection Settings"
+msgstr "場景偵測設定"
+
+msgid "Threshold:"
+msgstr "閾值:"
+
+msgid "(Higher = less sensitive)"
+msgstr "(越高越不敏感)"
+
+msgid "Use FP16 Precision"
+msgstr "使用 FP16 精度"
+
+msgid "Note: Scene detection identifies shot boundaries to prevent\ninterpolation artifacts during scene transitions."
+msgstr "注意: 場景偵測用於識別鏡頭邊界，\n防止場景切換時的插幀偽影。"
+
+# =============================================================================
+# Pipeline Config - Output Tab
+# =============================================================================
+msgid "Output"
+msgstr "輸出"
+
+msgid "Output Settings"
+msgstr "輸出設定"
+
+msgid "Codec:"
+msgstr "編碼器:"
+
+msgid "Quality (CRF/CQ):"
+msgstr "品質 (CRF/CQ):"
+
+msgid "(Lower = better quality)"
+msgstr "(越低品質越好)"
+
+msgid "Preset:"
+msgstr "預設:"
+
+msgid "Copy Audio Stream"
+msgstr "複製音訊串流"
+
+# =============================================================================
+# Progress Panel
+# =============================================================================
+msgid "Progress"
+msgstr "進度"
+
+msgid "Stage:"
+msgstr "階段:"
+
+msgid "Idle"
+msgstr "閒置"
+
+msgid "Initializing..."
+msgstr "初始化中..."
+
+msgid "Building pipeline..."
+msgstr "建構處理管線..."
+
+msgid "Processing..."
+msgstr "處理中..."
+
+msgid "Complete"
+msgstr "完成"
+
+msgid "FPS:"
+msgstr "幀率:"
+
+msgid "ETA:"
+msgstr "預計剩餘:"
+
+msgid "Elapsed:"
+msgstr "已用時間:"
+
+msgid "Log Output"
+msgstr "日誌輸出"
+
+msgid "Clear Log"
+msgstr "清除日誌"
+
+# =============================================================================
+# Batch Queue Widget
+# =============================================================================
+msgid "Batch Queue"
+msgstr "批次佇列"
+
+msgid "{} items"
+msgstr "{} 個項目"
+
+msgid "{} pending"
+msgstr "{} 待處理"
+
+msgid "{} done"
+msgstr "{} 已完成"
+
+msgid "{} failed"
+msgstr "{} 失敗"
+
+msgid "Start Batch"
+msgstr "開始批次處理"
+
+msgid "Clear"
+msgstr "清除"
+
+msgid "Remove"
+msgstr "移除"
+
+msgid "Retry"
+msgstr "重試"
+
+msgid "Path: {}"
+msgstr "路徑: {}"
+
+msgid "Status: {}"
+msgstr "狀態: {}"
+
+msgid "Output: {}"
+msgstr "輸出: {}"
+
+msgid "Error: {}"
+msgstr "錯誤: {}"
+
+# =============================================================================
+# Status Messages
+# =============================================================================
+msgid "Ready"
+msgstr "就緒"
+
+msgid "Selected: {}"
+msgstr "已選擇: {}"
+
+msgid "Added to queue"
+msgstr "已加入佇列"
+
+msgid "Processing started..."
+msgstr "處理已開始..."
+
+msgid "Processing resumed"
+msgstr "處理已繼續"
+
+msgid "Processing paused"
+msgstr "處理已暫停"
+
+msgid "Processing cancelled"
+msgstr "處理已取消"
+
+msgid "Processing complete: {}"
+msgstr "處理完成: {}"
+
+msgid "Processing failed"
+msgstr "處理失敗"
+
+msgid "Settings saved"
+msgstr "設定已儲存"
+
+msgid "Added {} videos to queue"
+msgstr "已加入 {} 個視訊到佇列"
+
+# =============================================================================
+# Dialogs
+# =============================================================================
+msgid "No Video"
+msgstr "無視訊"
+
+msgid "Please select a video file first."
+msgstr "請先選擇一個視訊檔案。"
+
+msgid "Cancel Processing"
+msgstr "取消處理"
+
+msgid "Are you sure you want to cancel processing?"
+msgstr "確定要取消處理嗎？"
+
+msgid "Processing Complete"
+msgstr "處理完成"
+
+msgid "Output saved to:\n{}"
+msgstr "輸出已儲存到:\n{}"
+
+msgid "Processing Error"
+msgstr "處理錯誤"
+
+msgid "An error occurred during processing:\n\n{}"
+msgstr "處理過程中發生錯誤:\n\n{}"
+
+msgid "Processing in Progress"
+msgstr "正在處理中"
+
+msgid "Processing is still running. Cancel and exit?"
+msgstr "處理仍在執行。取消並結束？"
+
+msgid "Clear Queue"
+msgstr "清除佇列"
+
+msgid "Are you sure you want to clear the queue?"
+msgstr "確定要清除佇列嗎？"
+
+msgid "No Videos Found"
+msgstr "未找到視訊"
+
+msgid "No video files found in the selected folder."
+msgstr "所選資料夾中未找到視訊檔案。"
+
+msgid "Select Video File"
+msgstr "選擇視訊檔案"
+
+msgid "Select Folder with Videos"
+msgstr "選擇包含視訊的資料夾"
+
+msgid "Video Files (*.mp4 *.mkv *.avi *.webm *.mov *.flv *.wmv *.ts *.m2ts);;All Files (*)"
+msgstr "視訊檔案 (*.mp4 *.mkv *.avi *.webm *.mov *.flv *.wmv *.ts *.m2ts);;所有檔案 (*)"
+
+msgid "Model Manager"
+msgstr "模型管理器"
+
+msgid "Model manager dialog will be implemented in a future update."
+msgstr "模型管理器對話方塊將在後續更新中實現。"
+
+# =============================================================================
+# File Dialog Filters
+# =============================================================================
+msgid "Video Files (*.mp4 *.mkv *.avi *.webm *.mov *.flv);;All Files (*)"
+msgstr "視訊檔案 (*.mp4 *.mkv *.avi *.webm *.mov *.flv);;所有檔案 (*)"
+
+# =============================================================================
+# RIFE Models (Keep model names in English)
+# =============================================================================
+msgid "4.6"
+msgstr "4.6"
+
+msgid "4.7"
+msgstr "4.7"
+
+msgid "4.18"
+msgstr "4.18"
+
+msgid "4.22"
+msgstr "4.22"
+
+msgid "4.26"
+msgstr "4.26"
+
+msgid "4.26.heavy"
+msgstr "4.26.heavy"
+
+# =============================================================================
+# Scene Detection Models (Keep model names in English)
+# =============================================================================
+msgid "EfficientFormerV2-S0 (224px)"
+msgstr "EfficientFormerV2-S0 (224px)"
+
+msgid "EfficientFormerV2-S0 + RIFE46 Flow"
+msgstr "EfficientFormerV2-S0 + RIFE46 光流"
+
+msgid "EfficientNetV2-B0 (256px)"
+msgstr "EfficientNetV2-B0 (256px)"
+
+msgid "EfficientNetV2-B0 + RIFE46 Flow"
+msgstr "EfficientNetV2-B0 + RIFE46 光流"
+
+msgid "SwinV2-Small (256px)"
+msgstr "SwinV2-Small (256px)"
+
+msgid "SwinV2-Small + RIFE46 Flow"
+msgstr "SwinV2-Small + RIFE46 光流"
+
+msgid "EfficientNetV2-B0 (48x27)"
+msgstr "EfficientNetV2-B0 (48x27)"
+
+msgid "DaViT-Small (256px) - 30k"
+msgstr "DaViT-Small (256px) - 30k"
+
+msgid "DaViT-Small (256px) - 40k"
+msgstr "DaViT-Small (256px) - 40k"
+
+msgid "MaxViTV2-Nano (256px) - 20k"
+msgstr "MaxViTV2-Nano (256px) - 20k"
+
+msgid "MaxViTV2-Nano (256px) - 30k"
+msgstr "MaxViTV2-Nano (256px) - 30k"
+
+msgid "MaxViTV2-Base (224px)"
+msgstr "MaxViTV2-Base (224px)"
+
+msgid "MobileViTV2 + RIFE422 + Sobel (Recommended)"
+msgstr "MobileViTV2 + RIFE422 + Sobel (推薦)"
+
+msgid "AutoShot (5 images)"
+msgstr "AutoShot (5 張影像)"
+
+msgid "Shift-LPIPS-Alex"
+msgstr "Shift-LPIPS-Alex"
+
+msgid "Shift-LPIPS-VGG"
+msgstr "Shift-LPIPS-VGG"
+
+msgid "DISTS"
+msgstr "DISTS"
+
+# =============================================================================
+# Language Names
+# =============================================================================
+msgid "Language"
+msgstr "語言"
+
+msgid "Simplified Chinese (简体中文)"
+msgstr "简体中文"
+
+msgid "Traditional Chinese (繁體中文)"
+msgstr "繁體中文"
+
+# =============================================================================
+# Proxy Settings
+# =============================================================================
+msgid "&Proxy Settings..."
+msgstr "代理設定(&P)..."
+
+msgid "Proxy Settings"
+msgstr "代理設定"
+
+msgid "Configure proxy settings to accelerate downloads from GitHub and other sites.\nCommon proxy tools: Clash (7890), v2rayN (10808), Shadowsocks (1080)"
+msgstr "設定代理以加速從 GitHub 和其他站點的下載。\n常見代理工具: Clash (7890)、v2rayN (10808)、Shadowsocks (1080)"
+
+msgid "Proxy Configuration"
+msgstr "代理配置"
+
+msgid "HTTP Proxy:"
+msgstr "HTTP 代理:"
+
+msgid "HTTPS Proxy:"
+msgstr "HTTPS 代理:"
+
+msgid "No Proxy for:"
+msgstr "不使用代理:"
+
+msgid "e.g., http://127.0.0.1:7890"
+msgstr "例如: http://127.0.0.1:7890"
+
+msgid "e.g., localhost,127.0.0.1,*.local"
+msgstr "例如: localhost,127.0.0.1,*.local"
+
+msgid "Network Settings"
+msgstr "網路設定"
+
+msgid "Download Timeout:"
+msgstr "下載超時:"
+
+msgid " seconds"
+msgstr " 秒"
+
+msgid "Max Retries:"
+msgstr "最大重試次數:"
+
+msgid "Quick Setup:"
+msgstr "快速設定:"
+
+msgid "Clash (7890)"
+msgstr "Clash (7890)"
+
+msgid "v2rayN (10808)"
+msgstr "v2rayN (10808)"
+
+msgid "SS (1080)"
+msgstr "SS (1080)"
+
+msgid "Test Connection"
+msgstr "測試連線"
+
+msgid "Clear"
+msgstr "清除"
+
+msgid "Save"
+msgstr "儲存"
+
+msgid "Connection Test"
+msgstr "連線測試"
+
+msgid "Successfully connected to GitHub!\nProxy is working correctly."
+msgstr "成功連線到 GitHub!\n代理運作正常。"
+
+msgid "Received status {} from GitHub."
+msgstr "從 GitHub 收到狀態 {}。"
+
+msgid "Connection Test Failed"
+msgstr "連線測試失敗"
+
+msgid "Failed to connect to GitHub:\n{}"
+msgstr "連線到 GitHub 失敗:\n{}"
+
+msgid "Settings Saved"
+msgstr "設定已儲存"
+
+msgid "Proxy settings have been saved successfully."
+msgstr "代理設定已成功儲存。"
+
+msgid "Warning"
+msgstr "警告"
+
+msgid "Failed to save network settings: {}"
+msgstr "儲存網路設定失敗: {}"
+
+msgid "Starting download..."
+msgstr "開始下載..."

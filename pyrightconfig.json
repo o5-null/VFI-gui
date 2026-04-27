@@ -1,0 +1,15 @@
+{
+  "include": [
+    "."
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/node_modules"
+  ],
+  "extraPaths": [
+    "./core/vsgan/src",
+    "./plugin/vapoursynth-portable/Lib/site-packages"
+  ],
+  "pythonVersion": "3.12",
+  "pythonPath": "E:/code/VFI/.venv/Scripts/python.exe"
+}
