@@ -18,6 +18,8 @@ from core.config.network_config import NetworkConfig
 from core.config.vapoursynth_config import VapourSynthConfig
 from core.config.output_config import OutputConfig
 from core.config.runtime_config import RuntimeConfig
+from core.config.paths_config import PathsConfig
+from core.config.performance_config import PerformanceConfig
 
 
 class ConfigFacade:
@@ -72,6 +74,14 @@ class ConfigFacade:
             str(self._config_dir / "runtime.json"),
             self._io_manager,
         )
+        self.paths = PathsConfig(
+            str(self._config_dir / "paths.json"),
+            self._io_manager,
+        )
+        self.performance = PerformanceConfig(
+            str(self._config_dir / "performance.json"),
+            self._io_manager,
+        )
         
         logger.debug("ConfigFacade initialized with all domain configs")
 
@@ -101,6 +111,8 @@ class ConfigFacade:
             "vapoursynth": self.vapoursynth,
             "output": self.output,
             "runtime": self.runtime,
+            "paths": self.paths,
+            "performance": self.performance,
         }
         
         if domain in domain_configs:
@@ -133,6 +145,8 @@ class ConfigFacade:
             "vapoursynth": self.vapoursynth,
             "output": self.output,
             "runtime": self.runtime,
+            "paths": self.paths,
+            "performance": self.performance,
         }
         
         if domain in domain_configs and subkey:
@@ -151,6 +165,8 @@ class ConfigFacade:
             "vapoursynth": self.vapoursynth.get_all(),
             "output": self.output.get_all(),
             "runtime": self.runtime.get_all(),
+            "paths": self.paths.get_all(),
+            "performance": self.performance.get_all(),
         }
 
     def save(self) -> None:
@@ -161,6 +177,8 @@ class ConfigFacade:
         self.vapoursynth.save()
         self.output.save()
         self.runtime.save()
+        self.paths.save()
+        self.performance.save()
         logger.debug("All configurations saved")
 
     def reset_to_defaults(self) -> None:
@@ -171,6 +189,8 @@ class ConfigFacade:
         self.vapoursynth.reset_to_defaults()
         self.output.reset_to_defaults()
         self.runtime.reset_to_defaults()
+        self.paths.reset_to_defaults()
+        self.performance.reset_to_defaults()
         logger.info("All configurations reset to defaults")
 
     # Convenience methods for common operations
@@ -253,6 +273,8 @@ class ConfigFacade:
             "vapoursynth": self.vapoursynth,
             "output": self.output,
             "runtime": self.runtime,
+            "paths": self.paths,
+            "performance": self.performance,
         }
         
         for key, config_value in value.items():
