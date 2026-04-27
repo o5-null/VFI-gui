@@ -74,7 +74,14 @@ class ModelSelectionManager(QObject):
             self._model_manager = ModelManager(temp_config)
         else:
             self._model_manager = model_manager
-        
+
+        # Connect to ModelManager signals for real-time updates
+        self._model_manager.models_updated.connect(self._on_model_manager_updated)
+        self._model_manager.engines_updated.connect(self._on_model_manager_updated)
+
+        # Flag to prevent recursion during signal handling
+        self._handling_model_update = False
+
         # Current selection
         self._current_type: str = ""
         self._current_checkpoint: Optional[str] = None
@@ -101,6 +108,74 @@ class ModelSelectionManager(QObject):
         if self._current_checkpoint:
             version = self._checkpoint_to_version(self._current_type, self._current_checkpoint)
             self._config.set("pipeline.interpolation.model_version", version)
+    
+    def _on_model_manager_updated(self):
+        """Handle ModelManager models_updated or engines_updated signal.
+        
+        This is called when ModelManager finishes scanning models/engines,
+        ensuring the selection manager stays synchronized with available models.
+        
+        Note: ModelManager has already refreshed its data before emitting this signal,
+        so we validate selection without calling refresh() to avoid recursion.
+        """
+        # Prevent recursion: if we're already handling an update, skip
+        if self._handling_model_update:
+            return
+        
+        self._handling_model_update = True
+        try:
+            old_type = self._current_type
+            old_checkpoint = self._current_checkpoint
+            
+            # Validate selection using current ModelManager data (no refresh needed)
+            self._validate_selection_no_refresh()
+            
+            # Emit signals to notify UI components
+            if self._current_type != old_type:
+                self.model_type_changed.emit(self._current_type)
+            if self._current_checkpoint != old_checkpoint:
+                if self._current_checkpoint:
+                    self.checkpoint_changed.emit(self._current_type, self._current_checkpoint)
+            
+            self.available_models_changed.emit()
+        finally:
+            self._handling_model_update = False
+    
+    def _validate_selection_no_refresh(self):
+        """Validate current selection using existing ModelManager data (no refresh).
+        
+        Used by signal handlers when ModelManager has already refreshed.
+        """
+        # Get current model types (ModelManager already has fresh data)
+        model_types = self._model_manager.get_model_types()
+        
+        # Check if current type is valid
+        if self._current_type not in model_types:
+            # Select first available type with installed models
+            for mt, info in model_types.items():
+                if info.installed_count > 0:
+                    self._current_type = mt
+                    self._current_checkpoint = None
+                    break
+            else:
+                # No models installed, use first type
+                self._current_type = list(model_types.keys())[0] if model_types else "rife"
+                self._current_checkpoint = None
+        
+        # Check if current checkpoint is valid
+        if self._current_checkpoint:
+            type_info = model_types.get(self._current_type)
+            if type_info:
+                valid_checkpoints = [c.name for c in type_info.checkpoints if c.is_installed]
+                if self._current_checkpoint not in valid_checkpoints:
+                    # Select first available checkpoint
+                    self._current_checkpoint = valid_checkpoints[0] if valid_checkpoints else None
+            else:
+                self._current_checkpoint = None
+        
+        # If no checkpoint selected, try to select default
+        if not self._current_checkpoint:
+            self._select_default_checkpoint()
     
     def _validate_selection(self):
         """Validate current selection and fix if needed."""
