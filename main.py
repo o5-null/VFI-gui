@@ -23,6 +23,21 @@ from core.logger import setup_logger, logger
 setup_logger()
 logger.info("VFI-gui starting...")
 
+# Log current device info
+current = runtime_manager.current_runtime
+if current:
+    for rt_info in runtime_manager.get_available_runtimes():
+        if rt_info.runtime_type == current:
+            if rt_info.gpu_name:
+                logger.info(f"Using device: {rt_info.gpu_name} ({current.value.upper()}, x{rt_info.gpu_count})")
+            else:
+                logger.info(f"Using device: {current.value.upper()}")
+            break
+    else:
+        logger.info(f"Using device: {current.value.upper()}")
+else:
+    logger.info("Using device: Unknown")
+
 # Ensure all directories exist
 paths.ensure_dirs()
 
