@@ -99,6 +99,8 @@ def get_device(device_id: int = 0) -> torch.device:
     """
     if torch.cuda.is_available():
         return torch.device(f"cuda:{device_id}")
+    if getattr(torch, "xpu", None) is not None and torch.xpu.is_available():
+        return torch.device(f"xpu:{device_id}")
     return torch.device("cpu")
 
 
@@ -108,6 +110,9 @@ def clear_cache():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
+    elif getattr(torch, "xpu", None) is not None and torch.xpu.is_available():
+        torch.xpu.empty_cache()
+        torch.xpu.synchronize()
 
 
 def load_model_weights(

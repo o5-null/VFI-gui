@@ -57,6 +57,8 @@ class BackendConfig:
             import torch
             if torch.cuda.is_available():
                 return "cuda:0"
+            if getattr(torch, "xpu", None) is not None and torch.xpu.is_available():
+                return "xpu:0"
             return "cpu"
         return self.device
 

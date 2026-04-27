@@ -107,7 +107,9 @@ def get_torch_device() -> torch.device:
     """Get the best available torch device."""
     if torch.cuda.is_available():
         return torch.device("cuda")
-    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    if getattr(torch, "xpu", None) is not None and torch.xpu.is_available():
+        return torch.device("xpu")
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
 
@@ -138,10 +140,13 @@ def postprocess_frames(frames: torch.Tensor) -> torch.Tensor:
 
 
 def clear_cuda_cache():
-    """Clear CUDA cache and run garbage collection."""
+    """Clear GPU cache and run garbage collection."""
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
+    elif getattr(torch, "xpu", None) is not None and torch.xpu.is_available():
+        torch.xpu.empty_cache()
+        torch.xpu.synchronize()
     gc.collect()
 
 
