@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
+    QFormLayout,
     QGroupBox,
     QCheckBox,
     QComboBox,
@@ -16,12 +17,16 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QScrollArea,
     QFrame,
+    QPushButton,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
 from core import tr
 from core.model_selection import ModelSelectionManager
+from core.device_type import DeviceType
+from core.device_manager import device_manager
 from ui.widgets.codec_settings import CodecSettingsWidget
+from ui.widgets.benchmark_dialog import BenchmarkDialog
 
 if TYPE_CHECKING:
     from core.config import Config
@@ -83,6 +88,9 @@ class PipelineConfigWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
+        # Initialize device list (using device_manager singleton)
+        self._available_devices = []
+
         # Tab widget for different settings sections
         self.tab_widget = QTabWidget()
 
@@ -98,6 +106,10 @@ class PipelineConfigWidget(QWidget):
         scene_tab = self._create_scene_detection_tab()
         self.tab_widget.addTab(scene_tab, tr("Scene Detect"))
 
+        # Device tab
+        device_tab = self._create_device_tab()
+        self.tab_widget.addTab(device_tab, tr("Device"))
+
         # Output tab
         output_tab = self._create_output_tab()
         self.tab_widget.addTab(output_tab, tr("Output"))
@@ -109,7 +121,8 @@ class PipelineConfigWidget(QWidget):
         self.tab_widget.setTabText(0, tr("Interpolation"))
         self.tab_widget.setTabText(1, tr("Upscaling"))
         self.tab_widget.setTabText(2, tr("Scene Detect"))
-        self.tab_widget.setTabText(3, tr("Output"))
+        self.tab_widget.setTabText(3, tr("Device"))
+        self.tab_widget.setTabText(4, tr("Output"))
         
         # Interpolation tab
         self.interp_enabled.setText(tr("Enable RIFE Interpolation"))
@@ -135,6 +148,12 @@ class PipelineConfigWidget(QWidget):
         self.scene_model_label.setText(tr("Model:"))
         self.scene_threshold_label.setText(tr("Threshold:"))
         self.scene_fp16.setText(tr("Use FP16 Precision"))
+        
+        # Device tab
+        self.device_label.setText(tr("Device:"))
+        self.device_auto.setText(tr("Auto-select best device"))
+        self.refresh_devices_btn.setText(tr("Refresh Device List"))
+        self.benchmark_btn.setText(tr("Device Detection & Benchmark..."))
         
         # Output tab (codec settings widget handles its own retranslation)
         self.codec_settings.retranslate_ui()
@@ -442,6 +461,188 @@ class PipelineConfigWidget(QWidget):
 
         return widget
 
+    def _create_device_tab(self) -> QWidget:
+        """Create the device selection settings tab."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Device selection group
+        device_group = QGroupBox(tr("Processing Device"))
+        device_layout = QVBoxLayout(device_group)
+
+        # Device selection dropdown
+        device_select_layout = QHBoxLayout()
+        self.device_label = QLabel(tr("Device:"))
+        device_select_layout.addWidget(self.device_label)
+
+        self.device_combo = QComboBox()
+        self.device_combo.setMinimumWidth(250)
+        self.device_combo.currentIndexChanged.connect(self._on_device_selection_changed)
+        device_select_layout.addWidget(self.device_combo, 1)
+
+        device_layout.addLayout(device_select_layout)
+
+        # Device info label
+        self.device_info_label = QLabel(tr("No device selected"))
+        self.device_info_label.setStyleSheet("color: #808080; font-size: 9pt;")
+        self.device_info_label.setWordWrap(True)
+        device_layout.addWidget(self.device_info_label)
+
+        # Refresh devices button
+        refresh_layout = QHBoxLayout()
+        self.refresh_devices_btn = QPushButton(tr("Refresh Device List"))
+        self.refresh_devices_btn.clicked.connect(self._refresh_devices)
+        refresh_layout.addWidget(self.refresh_devices_btn)
+
+        # Benchmark button
+        self.benchmark_btn = QPushButton(tr("Device Detection & Benchmark..."))
+        self.benchmark_btn.clicked.connect(self._open_benchmark_dialog)
+        refresh_layout.addWidget(self.benchmark_btn)
+        refresh_layout.addStretch()
+
+        device_layout.addLayout(refresh_layout)
+        layout.addWidget(device_group)
+
+        # Auto device option
+        self.device_auto = QCheckBox(tr("Auto-select best device"))
+        self.device_auto.setChecked(False)  # Default to manual selection
+        self.device_auto.stateChanged.connect(self._on_auto_device_changed)
+        layout.addWidget(self.device_auto)
+
+        # Device details group
+        details_group = QGroupBox(tr("Selected Device Details"))
+        details_layout = QFormLayout(details_group)
+
+        self.device_type_label = QLabel(tr("-"))
+        self.device_memory_label = QLabel(tr("-"))
+        self.device_compute_label = QLabel(tr("-"))
+
+        details_layout.addRow(tr("Type:"), self.device_type_label)
+        details_layout.addRow(tr("Memory:"), self.device_memory_label)
+        details_layout.addRow(tr("Compute Capability:"), self.device_compute_label)
+
+        layout.addWidget(details_group)
+
+        # Info label
+        info_label = QLabel(
+            tr("Note: Select the device for video processing. "
+               "Auto-select will choose the best available GPU.")
+        )
+        info_label.setStyleSheet("color: #808080; font-size: 9pt;")
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
+
+        layout.addStretch()
+
+        # Populate device list
+        self._refresh_devices()
+        
+        # Set initial state based on auto checkbox
+        self.device_combo.setEnabled(not self.device_auto.isChecked())
+
+        return widget
+
+    def _on_device_selection_changed(self):
+        """Handle device selection change."""
+        self._update_device_info()
+        self._on_config_changed()
+
+    def _on_auto_device_changed(self, state):
+        """Handle auto device checkbox change."""
+        self.device_combo.setEnabled(not self.device_auto.isChecked())
+        self._update_device_info()
+        self._on_config_changed()
+
+    def _refresh_devices(self):
+        """Refresh the list of available devices."""
+        try:
+            self.device_combo.clear()
+            self._available_devices = device_manager.get_devices()
+
+            # Add auto option
+            self.device_combo.addItem(tr("Auto (Best Available)"), "auto")
+
+            for device in self._available_devices:
+                device_str = f"{device.display_name}"
+                if device.total_memory_mb > 0:
+                    device_str += f" ({device.memory_gb:.1f} GB)"
+
+                # Create device identifier based on device type
+                if device.device_type == DeviceType.CUDA:
+                    device_id = f"cuda:{device.device_id}"
+                elif device.device_type == DeviceType.ROCM:
+                    device_id = f"rocm:{device.device_id}"
+                elif device.device_type == DeviceType.XPU:
+                    device_id = f"xpu:{device.device_id}"
+                else:
+                    device_id = "cpu"
+
+                self.device_combo.addItem(device_str, device_id)
+
+            # Select best device by default
+            self._update_device_info()
+        except Exception as e:
+            from loguru import logger
+            logger.error(f"Failed to refresh devices: {e}")
+            # Add fallback options
+            self.device_combo.addItem(tr("Auto (Best Available)"), "auto")
+            self.device_combo.addItem(tr("CPU"), "cpu")
+            self._update_device_info()
+
+    def _update_device_info(self):
+        """Update device info labels based on selection."""
+        device_str = self.device_combo.currentData()
+        is_auto = self.device_auto.isChecked()
+
+        # Default to auto if no selection
+        if device_str is None:
+            device_str = "auto"
+
+        if is_auto or device_str == "auto":
+            best_device = device_manager.get_best_device()
+            if best_device:
+                self.device_info_label.setText(
+                    tr("Will use best available device: {}")
+                    .format(best_device.display_name)
+                )
+                self.device_type_label.setText(best_device.device_type.value.upper())
+                self.device_memory_label.setText(
+                    f"{best_device.memory_gb:.1f} GB" if best_device.total_memory_mb > 0 else "N/A"
+                )
+                self.device_compute_label.setText(
+                    best_device.compute_capability or "N/A"
+                )
+        else:
+            # Find device info
+            for device in self._available_devices:
+                current_id = None
+                if device.device_type == DeviceType.CUDA:
+                    current_id = f"cuda:{device.device_id}"
+                elif device.device_type == DeviceType.ROCM:
+                    current_id = f"rocm:{device.device_id}"
+                elif device.device_type == DeviceType.XPU:
+                    current_id = f"xpu:{device.device_id}"
+                else:
+                    current_id = "cpu"
+
+                if current_id == device_str:
+                    self.device_info_label.setText(device.display_name)
+                    self.device_type_label.setText(device.device_type.value.upper())
+                    self.device_memory_label.setText(
+                        f"{device.memory_gb:.1f} GB" if device.total_memory_mb > 0 else "N/A"
+                    )
+                    self.device_compute_label.setText(
+                        device.compute_capability or "N/A"
+                    )
+                    break
+
+    def _open_benchmark_dialog(self):
+        """Open the benchmark dialog."""
+        dialog = BenchmarkDialog(self)
+        dialog.exec()
+        # Refresh devices after dialog closes
+        self._refresh_devices()
+
     def _create_output_tab(self) -> QWidget:
         """Create the output settings tab with comprehensive codec configuration."""
         widget = QWidget()
@@ -504,6 +705,20 @@ class PipelineConfigWidget(QWidget):
         self.scene_threshold.setValue(scene.get("threshold", 0.5))
         self.scene_fp16.setChecked(scene.get("fp16", True))
 
+        # Device
+        device_config = config.get("device", {})
+        device_str = device_config.get("device", "auto")
+        self.device_auto.setChecked(device_str == "auto")
+        self.device_combo.setEnabled(device_str != "auto")
+
+        # Select device in combo
+        if device_str != "auto":
+            for i in range(self.device_combo.count()):
+                if self.device_combo.itemData(i) == device_str:
+                    self.device_combo.setCurrentIndex(i)
+                    break
+        self._update_device_info()
+
         # Output - use codec settings widget
         output = config.get("output", {})
         self.codec_settings.load_config(output)
@@ -548,6 +763,9 @@ class PipelineConfigWidget(QWidget):
                 "model": self.scene_model.currentData(),
                 "threshold": self.scene_threshold.value(),
                 "fp16": self.scene_fp16.isChecked(),
+            },
+            "device": {
+                "device": "auto" if self.device_auto.isChecked() else self.device_combo.currentData(),
             },
             "output": output_config,
         }

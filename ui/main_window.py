@@ -43,6 +43,7 @@ from ui.widgets.progress_panel import ProgressPanel
 from ui.widgets.batch_queue import BatchQueueWidget
 from ui.widgets.model_manager_panel import ModelManagerPanel
 from ui.widgets.dependency_panel import DependencyPanel
+from ui.widgets.benchmark_dialog import BenchmarkDialog
 
 
 class MainWindow(QMainWindow):
@@ -155,6 +156,12 @@ class MainWindow(QMainWindow):
         models_action = QAction(tr("&Model Manager..."), self)
         models_action.triggered.connect(self._on_model_manager)
         tools_menu.addAction(models_action)
+
+        tools_menu.addSeparator()
+
+        benchmark_action = QAction(tr("&Device Detection & Benchmark..."), self)
+        benchmark_action.triggered.connect(self._on_benchmark)
+        tools_menu.addAction(benchmark_action)
 
         tools_menu.addSeparator()
 
@@ -546,13 +553,17 @@ class MainWindow(QMainWindow):
         }
         backend_type = backend_type_map.get(backend_type_str, BackendType.TORCH)
         
+        # Get device configuration from pipeline config
+        device_config = pipeline_config.get("device", {})
+        device_str = device_config.get("device", "auto")
+
         backend_config = BackendConfig(
             backend_type=backend_type,
             models_dir=vs_config.get("models_dir", "models"),
             temp_dir=vs_config.get("temp_dir", "temp"),
             output_dir=vs_config.get("output_dir", "output"),
             num_threads=vs_config.get("num_threads", 4),
-            device=pipeline_config.get("device", "auto"),
+            device=device_str,
             fp16=pipeline_config.get("fp16", True),
         )
         
@@ -561,6 +572,7 @@ class MainWindow(QMainWindow):
         processor.set_video(video_path)
         processor.set_processing_config(processing_config)
         self.processor = processor
+        self.backend_config = backend_config
 
         # Connect progress signals
         processor.progress_updated.connect(self.progress_panel.update_progress)
@@ -732,6 +744,11 @@ class MainWindow(QMainWindow):
         """Save current settings."""
         self._save_settings()
         self.statusbar.showMessage(tr("Settings saved"))
+
+    def _on_benchmark(self):
+        """Show benchmark and device detection dialog."""
+        dialog = BenchmarkDialog(self)
+        dialog.exec()
 
     def _on_about(self):
         """Show about dialog."""

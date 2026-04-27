@@ -91,25 +91,39 @@ def get_device(device_id: int = 0) -> torch.device:
     """
     Get the torch device.
     
+    Supports CUDA (NVIDIA), ROCm (AMD), XPU (Intel), and CPU.
+    ROCm devices use the "cuda" namespace in PyTorch.
+    
     Args:
         device_id: GPU device ID
         
     Returns:
         torch.device instance
     """
+    # Check for CUDA/ROCm (both use torch.cuda)
     if torch.cuda.is_available():
+        # Distinguish CUDA vs ROCm via torch.version.hip
         return torch.device(f"cuda:{device_id}")
+    
+    # Check for Intel XPU
     if getattr(torch, "xpu", None) is not None and torch.xpu.is_available():
         return torch.device(f"xpu:{device_id}")
+    
     return torch.device("cpu")
 
 
 def clear_cache():
-    """Clear GPU cache and run garbage collection."""
+    """Clear GPU cache and run garbage collection.
+    
+    Supports CUDA, ROCm, and XPU devices.
+    """
     gc.collect()
+    
+    # CUDA/ROCm both use torch.cuda namespace
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
+    # Intel XPU
     elif getattr(torch, "xpu", None) is not None and torch.xpu.is_available():
         torch.xpu.empty_cache()
         torch.xpu.synchronize()

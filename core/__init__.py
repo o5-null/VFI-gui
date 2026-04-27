@@ -43,11 +43,25 @@ from core.i18n import (
 from core.logger import logger, setup_logger, get_logger
 from core.runtime_manager import (
     RuntimeManager,
-    RuntimeType,
     RuntimeInfo,
     runtime_manager,
 )
 from core.config.runtime_config import RuntimeConfig, DEFAULT_RUNTIME_SETTINGS
+
+# Unified device management
+from core.device_type import DeviceType, RuntimeType, get_device_type_priority
+from core.device_manager import (
+    DeviceManager,
+    device_manager,
+    get_available_devices,
+    get_best_device,
+    is_cuda_available,
+    is_rocm_available,
+    is_xpu_available,
+    resolve_device,
+    get_torch_device,
+)
+from core.benchmark.device_detector import DeviceInfo, SystemInfo
 
 # Utils
 from core.utils import (
@@ -118,11 +132,25 @@ __all__ = [
     "get_logger",
     # Runtime
     "RuntimeManager",
-    "RuntimeType",
     "RuntimeInfo",
     "runtime_manager",
     "RuntimeConfig",
     "DEFAULT_RUNTIME_SETTINGS",
+    # Device management (unified)
+    "DeviceType",
+    "RuntimeType",  # Backward compatibility alias for DeviceType
+    "get_device_type_priority",
+    "DeviceManager",
+    "device_manager",
+    "DeviceInfo",
+    "SystemInfo",
+    "get_available_devices",
+    "get_best_device",
+    "is_cuda_available",
+    "is_rocm_available",
+    "is_xpu_available",
+    "resolve_device",
+    "get_torch_device",
     # Utils
     "natural_sort_key",
     "sort_files_naturally",

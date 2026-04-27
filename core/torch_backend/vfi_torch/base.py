@@ -46,7 +46,8 @@ class VFIConfig:
     
     # Backend settings
     backend: BackendType = BackendType.PYTORCH
-    device_id: int = 0
+    device: str = "auto"  # Device string: "auto", "cuda:0", "rocm:0", "xpu:0", "cpu"
+    device_id: int = 0  # DEPRECATED: Use device string instead
     fp16: bool = True
     num_streams: int = 1
     
@@ -97,10 +98,12 @@ class BaseVFIModel(ABC):
     
     @property
     def device(self) -> torch.device:
-        """Get the torch device based on configuration."""
-        if torch.cuda.is_available():
-            return torch.device(f"cuda:{self._config.device_id}")
-        return torch.device("cpu")
+        """Get the torch device based on configuration.
+        
+        Uses DeviceManager for device resolution.
+        """
+        from core.device_manager import get_torch_device
+        return get_torch_device(self._config.device)
     
     @abstractmethod
     def load_model(self, checkpoint_path: str) -> None:

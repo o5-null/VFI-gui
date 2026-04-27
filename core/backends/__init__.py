@@ -10,11 +10,13 @@ Architecture:
     BackendFactory -> Creates backend instances
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union, TYPE_CHECKING
 
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
 import numpy as np
@@ -38,7 +40,7 @@ class BackendConfig:
         temp_dir: Directory for temporary files
         output_dir: Directory for output files
         num_threads: Number of threads for processing
-        device: Device to use (e.g., "cuda:0", "cpu")
+        device: Device to use (e.g., "cuda:0", "rocm:0", "xpu:0", "cpu", "auto")
         fp16: Whether to use FP16 precision
         extra: Additional backend-specific options
     """
@@ -47,20 +49,31 @@ class BackendConfig:
     temp_dir: str = "temp"
     output_dir: str = "output"
     num_threads: int = 4
-    device: str = "auto"  # "auto", "cuda:0", "cuda:1", "cpu", etc.
+    device: str = "auto"  # "auto", "cuda:0", "rocm:0", "xpu:0", "cpu"
     fp16: bool = True
     extra: Dict[str, Any] = field(default_factory=dict)
     
     def get_device(self) -> str:
-        """Resolve device string to actual device."""
-        if self.device == "auto":
-            import torch
-            if torch.cuda.is_available():
-                return "cuda:0"
-            if getattr(torch, "xpu", None) is not None and torch.xpu.is_available():
-                return "xpu:0"
-            return "cpu"
-        return self.device
+        """Resolve device string to actual device.
+        
+        Delegates to DeviceManager for device resolution.
+        
+        Returns:
+            Device string (e.g., "cuda:0", "rocm:0", "xpu:0", "cpu")
+        """
+        from core.device_manager import resolve_device
+        return resolve_device(self.device)
+    
+    def get_torch_device(self):
+        """Get torch.device object for the configured device.
+        
+        Delegates to DeviceManager for torch device resolution.
+        
+        Returns:
+            torch.device instance
+        """
+        from core.device_manager import get_torch_device
+        return get_torch_device(self.device)
 
 
 @dataclass

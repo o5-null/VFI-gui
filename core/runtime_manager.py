@@ -1,7 +1,7 @@
 """Runtime Manager for VFI-gui.
 
 This module manages runtime environment detection, selection, and activation.
-It detects available GPU types (CUDA, Intel XPU) and activates the appropriate
+It detects available GPU types (CUDA, ROCm, Intel XPU) and activates the appropriate
 virtual environment from the runtime/ directory.
 
 Usage:
@@ -28,38 +28,16 @@ from loguru import logger
 
 from core.paths import paths
 from core.config.runtime_config import RuntimeConfig
+from core.device_type import DeviceType
 
-
-class RuntimeType(Enum):
-    """Supported runtime types."""
-    CUDA = "cuda"
-    XPU = "xpu"
-    CPU = "cpu"
-
-    @classmethod
-    def from_string(cls, value: str) -> "RuntimeType":
-        """Convert string to RuntimeType.
-
-        Args:
-            value: String value ("cuda", "xpu", "cpu")
-
-        Returns:
-            RuntimeType enum value
-
-        Raises:
-            ValueError: If value is not a valid runtime type
-        """
-        value = value.lower()
-        for rt in cls:
-            if rt.value == value:
-                return rt
-        raise ValueError(f"Invalid runtime type: {value}")
+# Backward compatibility: RuntimeType is now an alias for DeviceType
+RuntimeType = DeviceType
 
 
 @dataclass
 class RuntimeInfo:
     """Information about a runtime environment."""
-    runtime_type: RuntimeType
+    runtime_type: DeviceType
     name: str
     path: Path
     python_version: str
@@ -73,7 +51,7 @@ class RuntimeManager:
     """Manages runtime environment detection and activation.
 
     This class handles:
-    - GPU type detection (CUDA, Intel XPU)
+    - GPU type detection (CUDA, ROCm, Intel XPU)
     - Virtual environment validation
     - Runtime activation (sys.path, environment variables)
     - User preference persistence
@@ -81,6 +59,10 @@ class RuntimeManager:
     Runtime Directory Structure:
         runtime/
         ├── cuda/          # NVIDIA GPU environment
+        │   ├── Lib/
+        │   ├── Scripts/
+        │   └── pyvenv.cfg
+        ├── rocm/          # AMD GPU environment (optional)
         │   ├── Lib/
         │   ├── Scripts/
         │   └── pyvenv.cfg
@@ -94,8 +76,8 @@ class RuntimeManager:
         """Initialize the runtime manager."""
         self._runtime_dir = paths.app_dir.parent / "runtime"
         self._config = RuntimeConfig(str(paths.config_dir / "runtime.json"))
-        self._current_runtime: Optional[RuntimeType] = None
-        self._runtime_cache: Dict[RuntimeType, RuntimeInfo] = {}
+        self._current_runtime: Optional[DeviceType] = None
+        self._runtime_cache: Dict[DeviceType, RuntimeInfo] = {}
 
     @property
     def runtime_dir(self) -> Path:
@@ -103,11 +85,11 @@ class RuntimeManager:
         return self._runtime_dir
 
     @property
-    def current_runtime(self) -> Optional[RuntimeType]:
+    def current_runtime(self) -> Optional[DeviceType]:
         """Get the currently active runtime type."""
         return self._current_runtime
 
-    def get_runtime_path(self, runtime_type: RuntimeType) -> Path:
+    def get_runtime_path(self, runtime_type: DeviceType) -> Path:
         """Get the virtual environment path for a runtime type.
 
         Args:
@@ -116,25 +98,33 @@ class RuntimeManager:
         Returns:
             Path to the virtual environment
         """
-        if runtime_type == RuntimeType.CPU:
+        if runtime_type == DeviceType.CPU:
             # CPU uses system Python, no venv path
             return Path(sys.executable).parent.parent
         return self._runtime_dir / runtime_type.value
 
-    def detect_gpu(self) -> Tuple[RuntimeType, Optional[str], int]:
+    def detect_gpu(self) -> Tuple[DeviceType, Optional[str], int]:
         """Detect available GPU type.
 
         Returns:
             Tuple of (runtime_type, gpu_name, gpu_count)
         """
-        # Try CUDA first
+        # Try CUDA first (NVIDIA)
         try:
             import torch
             if torch.cuda.is_available():
+                # Check if this is ROCm (torch.version.hip is set)
+                if hasattr(torch.version, 'hip') and torch.version.hip is not None:
+                    # This is ROCm, not CUDA
+                    gpu_name = torch.cuda.get_device_name(0)
+                    gpu_count = torch.cuda.device_count()
+                    logger.info(f"Detected AMD ROCm GPU: {gpu_name} (x{gpu_count})")
+                    return DeviceType.ROCM, gpu_name, gpu_count
+                
                 gpu_name = torch.cuda.get_device_name(0)
                 gpu_count = torch.cuda.device_count()
                 logger.info(f"Detected NVIDIA CUDA GPU: {gpu_name} (x{gpu_count})")
-                return RuntimeType.CUDA, gpu_name, gpu_count
+                return DeviceType.CUDA, gpu_name, gpu_count
         except ImportError:
             logger.debug("PyTorch not available for CUDA detection")
         except Exception as e:
@@ -148,7 +138,7 @@ class RuntimeManager:
                 gpu_count = torch.xpu.device_count()
                 gpu_name = torch.xpu.get_device_name(0) if gpu_count > 0 else "Intel GPU"
                 logger.info(f"Detected Intel XPU GPU: {gpu_name} (x{gpu_count})")
-                return RuntimeType.XPU, gpu_name, gpu_count
+                return DeviceType.XPU, gpu_name, gpu_count
         except ImportError:
             logger.debug("PyTorch not available for XPU detection")
         except Exception as e:
@@ -156,9 +146,9 @@ class RuntimeManager:
 
         # Fallback to CPU
         logger.info("No GPU detected, using CPU mode")
-        return RuntimeType.CPU, None, 0
+        return DeviceType.CPU, None, 0
 
-    def check_runtime_available(self, runtime_type: RuntimeType) -> RuntimeInfo:
+    def check_runtime_available(self, runtime_type: DeviceType) -> RuntimeInfo:
         """Check if a runtime environment is available and valid.
 
         Args:
@@ -170,9 +160,9 @@ class RuntimeManager:
         if runtime_type in self._runtime_cache:
             return self._runtime_cache[runtime_type]
 
-        if runtime_type == RuntimeType.CPU:
+        if runtime_type == DeviceType.CPU:
             info = RuntimeInfo(
-                runtime_type=RuntimeType.CPU,
+                runtime_type=DeviceType.CPU,
                 name="CPU",
                 path=Path(sys.executable).parent.parent,
                 python_version=self._get_python_version(Path(sys.executable).parent.parent),
@@ -268,15 +258,15 @@ class RuntimeManager:
             List of RuntimeInfo for all runtime types
         """
         runtimes = []
-        for rt in [RuntimeType.CUDA, RuntimeType.XPU, RuntimeType.CPU]:
+        for rt in [DeviceType.CUDA, DeviceType.ROCM, DeviceType.XPU, DeviceType.CPU]:
             runtimes.append(self.check_runtime_available(rt))
         return runtimes
 
-    def auto_select_runtime(self) -> RuntimeType:
+    def auto_select_runtime(self) -> DeviceType:
         """Auto-detect GPU and select the best available runtime.
 
         This method:
-        1. Detects GPU type (CUDA, XPU, or CPU)
+        1. Detects GPU type (CUDA, ROCm, XPU, or CPU)
         2. Checks if the corresponding runtime is available
         3. Falls back to CPU if GPU runtime not available
         4. Persists the detected runtime
@@ -288,7 +278,7 @@ class RuntimeManager:
         selected = self._config.get_selected_runtime()
         if selected and not self._config.get_auto_detect():
             try:
-                runtime_type = RuntimeType.from_string(selected)
+                runtime_type = DeviceType.from_string(selected)
                 info = self.check_runtime_available(runtime_type)
                 if info.is_available:
                     self._activate_runtime(runtime_type)
@@ -314,12 +304,12 @@ class RuntimeManager:
 
         # Fall back to CPU
         logger.warning(f"Detected {detected_type.value} but runtime not available, using CPU")
-        self._activate_runtime(RuntimeType.CPU)
-        self._config.set_last_detected_runtime(RuntimeType.CPU.value)
+        self._activate_runtime(DeviceType.CPU)
+        self._config.set_last_detected_runtime(DeviceType.CPU.value)
 
-        return RuntimeType.CPU
+        return DeviceType.CPU
 
-    def select_runtime(self, runtime_type: RuntimeType) -> bool:
+    def select_runtime(self, runtime_type: DeviceType) -> bool:
         """Manually select and activate a runtime.
 
         Args:
@@ -339,7 +329,7 @@ class RuntimeManager:
 
         return True
 
-    def _activate_runtime(self, runtime_type: RuntimeType) -> None:
+    def _activate_runtime(self, runtime_type: DeviceType) -> None:
         """Activate a runtime environment.
 
         This sets up sys.path and environment variables for the selected runtime.
@@ -347,7 +337,7 @@ class RuntimeManager:
         Args:
             runtime_type: Runtime type to activate
         """
-        if runtime_type == RuntimeType.CPU:
+        if runtime_type == DeviceType.CPU:
             logger.info("Using CPU runtime (system Python)")
             self._current_runtime = runtime_type
             return
