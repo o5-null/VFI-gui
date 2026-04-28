@@ -37,6 +37,8 @@ from core import (
     ProcessingConfig,
 )
 from core.model_selection import ModelSelectionManager
+from core.task_orchestrator import TaskOrchestrator
+from ui.controllers.processing_controller import ProcessingController
 from ui.widgets.video_input import VideoInputWidget
 from ui.widgets.pipeline_config import PipelineConfigWidget
 from ui.widgets.progress_panel import ProgressPanel
@@ -63,10 +65,14 @@ class MainWindow(QMainWindow):
         # Initialize components - use global config provider for consistency
         from core import get_config
         self.config = get_config()
-        self.processor: Optional[Processor] = None
+        self.processor: Optional[Processor] = None  # Deprecated - kept for backward compat
         self.queue_manager = QueueManager()
         # Create shared model manager (single source of truth)
         self.model_manager = ModelManager(self.config)
+
+        # NEW: Create TaskOrchestrator and ProcessingController
+        self._orchestrator = TaskOrchestrator(self.config)
+        self._controller = ProcessingController(self._orchestrator, self)
         
         # Create shared model selection manager using the same model manager
         self.model_selection_manager = ModelSelectionManager(
@@ -382,9 +388,16 @@ class MainWindow(QMainWindow):
         # Batch queue signals
         self.batch_queue.start_batch_requested.connect(self._on_start_batch)
         self.batch_queue.item_selected.connect(self._on_queue_item_selected)
-        
+
         # Language change signal
         get_i18n().language_changed.connect(self._on_language_changed_signal)
+
+        # NEW: Connect ProcessingController signals
+        self._controller.progress_updated.connect(self.progress_panel.update_progress)
+        self._controller.processing_finished.connect(self._on_processing_finished_new)
+        self._controller.error_occurred.connect(self._on_processing_error_new)
+        self._controller.processing_cancelled.connect(self._on_processing_cancelled_new)
+        self._controller.state_changed.connect(self._on_state_changed_new)
 
     def _load_settings(self):
         """Load saved settings from config."""
@@ -526,84 +539,39 @@ class MainWindow(QMainWindow):
         self._start_processing(video_path)
 
     def _start_processing(self, video_path: str, custom_config: Optional[Dict[str, Any]] = None):
-        """Start processing a video file."""
+        """Start processing a video file using TaskOrchestrator via ProcessingController."""
         logger.info(f"Starting processing: {video_path}")
-        
-        # Get processing config
+
+        # Get pipeline config (now passed directly to orchestrator)
         pipeline_config = custom_config or self.pipeline_config.get_config()
-        
-        # Build ProcessingConfig from pipeline config
-        processing_config = ProcessingConfig(
-            interpolation=pipeline_config.get("interpolation", {}),
-            upscaling=pipeline_config.get("upscaling", {}),
-            scene_detection=pipeline_config.get("scene_detection", {}),
-            output=pipeline_config.get("output", {}),
-        )
-        
-        # Build BackendConfig
-        vs_config = self.config.get_vapoursynth_config()
-        backend_type_str = pipeline_config.get("backend", "torch").lower()
-        
-        # Map string to BackendType
-        backend_type_map = {
-            "torch": BackendType.TORCH,
-            "pytorch": BackendType.TORCH,
-            "vapoursynth": BackendType.VAPOURSYNTH,
-            "vs": BackendType.VAPOURSYNTH,
-        }
-        backend_type = backend_type_map.get(backend_type_str, BackendType.TORCH)
-        
-        # Get device configuration from pipeline config
-        device_config = pipeline_config.get("device", {})
-        device_str = device_config.get("device", "auto")
 
-        backend_config = BackendConfig(
-            backend_type=backend_type,
-            models_dir=vs_config.get("models_dir", "models"),
-            temp_dir=vs_config.get("temp_dir", "temp"),
-            output_dir=vs_config.get("output_dir", "output"),
-            num_threads=vs_config.get("num_threads", 4),
-            device=device_str,
-            fp16=pipeline_config.get("fp16", True),
-        )
-        
-        # Create processor
-        processor = Processor(backend_config)
-        processor.set_video(video_path)
-        processor.set_processing_config(processing_config)
-        self.processor = processor
-        self.backend_config = backend_config
+        # Use ProcessingController to start processing
+        # This delegates to TaskOrchestrator which handles backend + IO
+        task_id = self._controller.start_processing(video_path, pipeline_config)
 
-        # Connect progress signals
-        processor.progress_updated.connect(self.progress_panel.update_progress)
-        processor.stage_changed.connect(self.progress_panel.set_stage)
-        processor.log_message.connect(self.progress_panel.append_log)
-        processor.finished.connect(self._on_processing_finished)
-        processor.error_occurred.connect(self._on_processing_error)
-
-        # Update UI state
-        self._set_processing_state(True)
-
-        # Start processing
-        processor.start()
-        self.processing_started.emit()
-        self.statusbar.showMessage(tr("Processing started..."))
+        if task_id:
+            # Update UI state
+            self._set_processing_state(True)
+            self.processing_started.emit()
+            self.statusbar.showMessage(tr("Processing started..."))
+        else:
+            logger.error(f"Failed to start processing: {video_path}")
 
     def _on_pause_processing(self):
-        """Pause/resume processing."""
-        if self.processor:
-            if self.processor.is_paused():
-                self.processor.resume()
-                self.pause_action.setText(tr("Pause"))
-                self.statusbar.showMessage(tr("Processing resumed"))
-            else:
-                self.processor.pause()
-                self.pause_action.setText(tr("Resume"))
-                self.statusbar.showMessage(tr("Processing paused"))
+        """Pause/resume processing using ProcessingController."""
+        state = self._controller.get_state()
+        if state == "paused":
+            self._controller.resume_processing()
+            self.pause_action.setText(tr("Pause"))
+            self.statusbar.showMessage(tr("Processing resumed"))
+        elif state == "running":
+            self._controller.pause_processing()
+            self.pause_action.setText(tr("Resume"))
+            self.statusbar.showMessage(tr("Processing paused"))
 
     def _on_cancel_processing(self):
-        """Cancel processing."""
-        if self.processor:
+        """Cancel processing using ProcessingController."""
+        if self._controller.is_processing():
             reply = QMessageBox.question(
                 self,
                 tr("Cancel Processing"),
@@ -611,20 +579,8 @@ class MainWindow(QMainWindow):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
-                # Get cancellation settings
-                force_terminate = self.backend_config.extra.get("force_terminate_on_cancel", False)
-                cancel_timeout = self.backend_config.extra.get("cancel_timeout", 5.0)
-
                 self.statusbar.showMessage(tr("Cancelling processing..."))
-
-                # Cancel with settings
-                if hasattr(self.processor, 'cancel'):
-                    self.processor.cancel(force=force_terminate, timeout=cancel_timeout)
-                else:
-                    self.processor.cancel()
-
-                self.processing_cancelled.emit()
-                self.statusbar.showMessage(tr("Processing cancelled"))
+                self._controller.cancel_processing()
 
     def _on_processing_finished(self, output_path: str):
         """Handle processing completion."""
@@ -644,7 +600,7 @@ class MainWindow(QMainWindow):
             self._process_next_in_queue()
 
     def _on_processing_error(self, error_message: str):
-        """Handle processing error."""
+        """Handle processing error (legacy handler for Processor signals)."""
         logger.error(f"Processing error: {error_message}")
         self._set_processing_state(False)
         self.statusbar.showMessage(tr("Processing failed"))
@@ -654,6 +610,55 @@ class MainWindow(QMainWindow):
             tr("Processing Error"),
             tr("An error occurred during processing:\n\n{}").format(error_message),
         )
+
+    # ====================
+    # NEW: Handlers for ProcessingController signals
+    # ====================
+
+    def _on_processing_finished_new(self, success: bool, message: str):
+        """Handle processing completion from TaskOrchestrator."""
+        if success:
+            logger.info(f"Processing finished: {message}")
+            self._set_processing_state(False)
+            self.processing_finished.emit()
+            self.statusbar.showMessage(tr("Processing complete: {}").format(message))
+
+            QMessageBox.information(
+                self,
+                tr("Processing Complete"),
+                tr("Output saved to:\n{}").format(message),
+            )
+        else:
+            # Error case - handled by _on_processing_error_new
+            pass
+
+    def _on_processing_error_new(self, error_message: str):
+        """Handle processing error from TaskOrchestrator."""
+        logger.error(f"Processing error: {error_message}")
+        self._set_processing_state(False)
+        self.statusbar.showMessage(tr("Processing failed"))
+
+        QMessageBox.critical(
+            self,
+            tr("Processing Error"),
+            tr("An error occurred during processing:\n\n{}").format(error_message),
+        )
+
+    def _on_processing_cancelled_new(self):
+        """Handle processing cancelled from TaskOrchestrator."""
+        logger.info("Processing cancelled")
+        self._set_processing_state(False)
+        self.processing_cancelled.emit()
+        self.statusbar.showMessage(tr("Processing cancelled"))
+
+    def _on_state_changed_new(self, state: str):
+        """Handle orchestrator state change."""
+        if state == "paused":
+            self.pause_action.setText(tr("Resume"))
+        else:
+            self.pause_action.setText(tr("Pause"))
+
+    # ====================
 
     def _set_processing_state(self, processing: bool):
         """Update UI state based on processing status."""
@@ -716,19 +721,24 @@ class MainWindow(QMainWindow):
     def _apply_performance_settings(self, settings: dict):
         """Apply performance settings to backend configuration.
 
+        DEPRECATED: This method is deprecated. Performance settings should now
+        be passed via pipeline_config to TaskOrchestrator instead.
+
         Args:
             settings: Performance settings dictionary
-        """
-        # Update backend config with performance settings
-        extra_config = self.backend_config.extra.copy()
-        extra_config["inference_threads"] = settings["inference_threads"] if settings["enable_threading"] else 1
-        extra_config["task_queue_size"] = settings["task_queue_size"]
-        extra_config["clear_cache_every"] = settings["cache_interval"]
-        extra_config["force_terminate_on_cancel"] = settings["force_terminate"]
-        extra_config["cancel_timeout"] = settings["cancel_timeout"]
-        self.backend_config.extra = extra_config
 
-        logger.info(f"Performance settings applied: {settings}")
+        Note:
+            The new architecture passes these settings through the pipeline config
+            to TaskOrchestrator rather than modifying a shared backend_config.
+        """
+        import warnings
+        warnings.warn(
+            "_apply_performance_settings() is deprecated. "
+            "Performance settings should be set via the pipeline config UI.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        logger.warning("Performance settings are now passed via pipeline config to TaskOrchestrator")
 
     def _on_model_downloaded(self, model_type: str, ckpt_name: str):
         """Handle model download completion."""
@@ -779,7 +789,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent):
         """Handle window close event."""
-        if self.processor and self.processor.is_running():
+        # Check if processing is in progress using ProcessingController
+        if self._controller.is_processing():
             reply = QMessageBox.question(
                 self,
                 tr("Processing in Progress"),
@@ -790,7 +801,11 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
 
-            self.processor.cancel()
+            # Cancel via controller
+            self._controller.cancel_processing()
+
+        # Shutdown orchestrator gracefully
+        self._orchestrator.shutdown()
 
         self._save_settings()
         event.accept()

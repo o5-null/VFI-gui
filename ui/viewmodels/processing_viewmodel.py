@@ -1,50 +1,26 @@
 """Processing ViewModel for VFI-gui.
 
+.. deprecated::
+    Use :class:`ProcessingController <ui.controllers.processing_controller.ProcessingController>`
+    instead. The ProcessingViewModel class is kept for backward compatibility only.
+
 Acts as intermediary between processing UI and core processing logic,
 providing a clean interface for video processing operations.
 """
 
-from typing import Dict, Any, Optional, Callable
-from pathlib import Path
-from PyQt6.QtCore import QObject, pyqtSignal, QThread
+import warnings
+from typing import Optional
+from PyQt6.QtCore import QObject, pyqtSignal
 
 from core import Processor, ProcessingConfig, BackendType
-
-
-class ProcessingWorker(QThread):
-    """Worker thread for video processing."""
-    
-    progress = pyqtSignal(int, int, float)  # frame, total, fps
-    finished = pyqtSignal(bool, str)  # success, message
-    error = pyqtSignal(str)  # error message
-    
-    def __init__(self, processor: Processor, video_path: str, output_path: str):
-        super().__init__()
-        self._processor = processor
-        self._video_path = video_path
-        self._output_path = output_path
-        self._is_cancelled = False
-    
-    def run(self):
-        """Execute processing."""
-        try:
-            # This would call the actual processing
-            # For now, just a placeholder structure
-            self.finished.emit(True, "Processing completed")
-        except Exception as e:
-            self.error.emit(str(e))
-            self.finished.emit(False, str(e))
-    
-    def cancel(self):
-        """Request cancellation."""
-        self._is_cancelled = True
-        if self._processor:
-            self._processor.cancel()
+from core.workers import ProcessingWorker
 
 
 class ProcessingViewModel(QObject):
     """ViewModel for video processing operations.
-    
+
+    .. deprecated:: Use ProcessingController instead.
+
     Decouples processing UI from core Processor implementation.
     Manages processing state and worker thread.
     """
@@ -64,6 +40,11 @@ class ProcessingViewModel(QObject):
     STATE_ERROR = "error"
     
     def __init__(self, parent=None):
+        warnings.warn(
+            "ProcessingViewModel is deprecated. Use ProcessingController instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(parent)
         self._processor: Optional[Processor] = None
         self._worker: Optional[ProcessingWorker] = None

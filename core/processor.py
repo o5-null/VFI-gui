@@ -1,5 +1,10 @@
 """Video processing engine with multi-backend support.
 
+.. deprecated::
+    Use :class:`TaskOrchestrator <core.task_orchestrator.TaskOrchestrator>` instead.
+    The Processor class is kept for backward compatibility only and will be
+    removed in a future version.
+
 This module provides a unified video processing interface that supports
 multiple backends (VapourSynth, PyTorch, etc.) through a common API.
 
@@ -12,6 +17,7 @@ Usage:
 """
 
 import time
+import warnings
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -61,7 +67,11 @@ SUPPORTED_INTERPOLATION_MODELS = {
 
 class Processor(QThread):
     """Unified video processor with multi-backend support.
-    
+
+    .. deprecated::
+        Use :class:`TaskOrchestrator <core.task_orchestrator.TaskOrchestrator>` instead.
+        The Processor class is kept for backward compatibility only.
+
     This class provides a Qt-compatible interface for video processing,
     supporting multiple backends through a unified API.
     
@@ -94,10 +104,17 @@ class Processor(QThread):
     ):
         """Initialize the processor.
         
+        .. deprecated:: Use TaskOrchestrator instead.
+
         Args:
             backend_config: Backend configuration. Uses VapourSynth if None.
             parent: Parent QObject
         """
+        warnings.warn(
+            "Processor is deprecated. Use TaskOrchestrator instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(parent)
         
         self._backend_config = backend_config or BackendConfig()

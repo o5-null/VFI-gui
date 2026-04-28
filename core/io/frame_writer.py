@@ -26,7 +26,30 @@ from core.io.frame_data import (
 
 class FrameWriter(ABC):
     """Abstract base class for frame writers."""
-    
+
+    @abstractmethod
+    def open(
+        self,
+        output_path: Union[str, Path],
+        metadata: VideoMetadata,
+    ) -> None:
+        """Open output for streaming writes.
+
+        Args:
+            output_path: Output file path
+            metadata: Video metadata
+        """
+        pass
+
+    @abstractmethod
+    def write_frame(self, frame: ProcessedFrameData) -> None:
+        """Write single frame (streaming).
+
+        Args:
+            frame: Processed frame data
+        """
+        pass
+
     @abstractmethod
     def write_frames(
         self,
@@ -35,8 +58,8 @@ class FrameWriter(ABC):
         metadata: VideoMetadata,
         progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> None:
-        """Write frames to output.
-        
+        """Write frames to output (batch mode).
+
         Args:
             frames: Iterator of processed frames
             output_path: Output file path
@@ -44,7 +67,7 @@ class FrameWriter(ABC):
             progress_callback: Callback(current, total)
         """
         pass
-    
+
     @abstractmethod
     def close(self) -> None:
         """Close writer and cleanup resources."""
