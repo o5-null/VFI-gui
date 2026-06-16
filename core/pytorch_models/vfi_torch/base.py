@@ -25,6 +25,8 @@ class ModelType(Enum):
     FLAVR = "flavr"
     CAIN = "cain"
     XVFI = "xvfi"
+    ATM = "atm"
+    MOMO = "momo"
 
 
 class BackendType(Enum):
@@ -306,7 +308,9 @@ def get_model(config: VFIConfig) -> PyTorchVFIModel:
     from .amt import AMTModel
     from .xvfi import XVFIModel
     from .gmfss import GMFSSModel
-    
+    from .atm import ATMVFIModel
+    from .momo import MoMoModel
+
     model_classes = {
         ModelType.RIFE: RIFEModel,
         ModelType.FILM: FILMModel,
@@ -314,6 +318,8 @@ def get_model(config: VFIConfig) -> PyTorchVFIModel:
         ModelType.AMT: AMTModel,
         ModelType.XVFI: XVFIModel,
         ModelType.GMFSS: GMFSSModel,
+        ModelType.ATM: ATMVFIModel,
+        ModelType.MOMO: MoMoModel,
     }
     
     if config.model_type not in model_classes:

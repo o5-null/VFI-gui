@@ -29,6 +29,8 @@ DEFAULT_CKPTS: dict[str, str] = {
     "IFRNET": "models/ifrnet/IFRNet_L_Vimeo90K.pth",
     "AMT": "models/amt/amt-g.pth",
     "XVFI": "models/xvfi/XVFInet_Vimeo_exp1_latest.pt",
+    "ATM": "models/atm/atm-vfi-base.pt",
+    "MOMO": "models/momo/momo-base.pth",
 }
 
 # Models that need special config overrides.

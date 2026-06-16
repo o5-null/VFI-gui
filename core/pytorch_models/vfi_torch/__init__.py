@@ -31,6 +31,8 @@ from .ifrnet import IFRNetModel
 from .amt import AMTModel
 from .gmfss import GMFSSModel
 from .xvfi import XVFIModel
+from .atm import ATMVFIModel
+from .momo import MoMoModel
 
 # 模型注册表
 MODEL_REGISTRY = {
@@ -40,6 +42,8 @@ MODEL_REGISTRY = {
     ModelType.AMT: AMTModel,
     ModelType.GMFSS: GMFSSModel,
     ModelType.XVFI: XVFIModel,
+    ModelType.ATM: ATMVFIModel,
+    ModelType.MOMO: MoMoModel,
 }
 
 
@@ -84,6 +88,9 @@ __all__ = [
     "IFRNetModel",
     "AMTModel",
     "GMFSSModel",
+    "XVFIModel",
+    "ATMVFIModel",
+    "MoMoModel",
     # 工厂函数
     "get_model",
     "MODEL_REGISTRY",

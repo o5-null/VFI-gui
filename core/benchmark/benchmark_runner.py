@@ -494,6 +494,8 @@ class BenchmarkRunner:
             "flavr": ModelType.FLAVR,
             "cain": ModelType.CAIN,
             "xvfi": ModelType.XVFI,
+            "atm": ModelType.ATM,
+            "momo": ModelType.MOMO,
         }
         model_type = model_type_map.get(config.model_type.lower())
         if model_type is None:
