@@ -1,0 +1,46 @@
+{
+  "_metadata": {
+    "version": "1.0",
+    "description": "Engine configuration for VFI-gui",
+    "source_app": "VFI-gui"
+  },
+  "engines": [
+    {
+      "engine_id": "auto_torch_xpu0",
+      "backend_type": "torch",
+      "execution_mode": "inprocess",
+      "gpu_device": "xpu:0",
+      "model_config": {
+        "model_type": "rife",
+        "model_version": "4.22",
+        "precision": "fp16",
+        "scale": 1.0
+      },
+      "status": "idle"
+    }
+  ],
+  "auto_configure_defaults": {
+    "torch": {
+      "backend_type": "torch",
+      "execution_mode": "inprocess",
+      "model_type": "rife",
+      "model_version": "4.22",
+      "precision": "fp16",
+      "scale": 1.0
+    },
+    "ncnn": {
+      "backend_type": "ncnn",
+      "execution_mode": "subprocess",
+      "model_type": "rife",
+      "model_version": "4.22",
+      "precision": "fp16",
+      "scale": 1.0,
+      "executable": "rife-ncnn-vulkan"
+    },
+    "vapoursynth": {
+      "backend_type": "vapoursynth",
+      "execution_mode": "subprocess",
+      "executable": "vspipe"
+    }
+  }
+}

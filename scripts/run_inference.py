@@ -37,7 +37,7 @@ MODEL_SPECIAL_CONFIG: dict[str, dict] = {
 }
 
 # Models listed in ModelType but not yet registered.
-MODEL_SKIP: set = {"STMFNET", "FLAVR", "CAIN", "EISAI"}
+MODEL_SKIP: set = {"STMFNET", "FLAVR", "CAIN"}
 
 
 def _resolve_runtime_python() -> str:

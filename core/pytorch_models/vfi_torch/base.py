@@ -25,7 +25,6 @@ class ModelType(Enum):
     FLAVR = "flavr"
     CAIN = "cain"
     XVFI = "xvfi"
-    EISAI = "eisai"
 
 
 class BackendType(Enum):
@@ -306,7 +305,6 @@ def get_model(config: VFIConfig) -> PyTorchVFIModel:
     from .ifrnet import IFRNetModel
     from .amt import AMTModel
     from .xvfi import XVFIModel
-    from .eisai import EISAIModel
     from .gmfss import GMFSSModel
     
     model_classes = {
@@ -315,7 +313,6 @@ def get_model(config: VFIConfig) -> PyTorchVFIModel:
         ModelType.IFRNET: IFRNetModel,
         ModelType.AMT: AMTModel,
         ModelType.XVFI: XVFIModel,
-        ModelType.EISAI: EISAIModel,
         ModelType.GMFSS: GMFSSModel,
     }
     

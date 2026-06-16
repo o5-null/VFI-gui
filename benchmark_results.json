@@ -1,0 +1,85 @@
+{
+  "config": {
+    "mode": "multi_res",
+    "warmup_iterations": 1,
+    "sequence_repetitions": 1,
+    "test_iterations": 10,
+    "test_resolutions": [
+      [
+        1280,
+        720
+      ]
+    ],
+    "example_dir": "example/1080p",
+    "model_type": "rife",
+    "checkpoint_name": "rife49.pth",
+    "multiplier": 2,
+    "dtype": "float16",
+    "device_id": 0,
+    "device_type": null,
+    "resolved_device": null,
+    "num_threads": 0,
+    "monitor_hardware": true,
+    "torch_compile": true,
+    "profiler_config": {
+      "enabled": false,
+      "trace_cpu": true,
+      "trace_cuda": true,
+      "record_shapes": true,
+      "profile_memory": true,
+      "with_stack": false,
+      "with_flops": false,
+      "output_dir": "profiler_logs",
+      "export_chrome_trace": true,
+      "export_tensorboard": false,
+      "top_ops_limit": 15,
+      "sort_by": "cuda_time_total"
+    },
+    "output_path": "benchmark_results.json"
+  },
+  "device_info": {
+    "device_type": "xpu",
+    "name": "Intel(R) Arc(TM) 140V GPU (16GB)",
+    "device_id": 0,
+    "total_memory_mb": 0,
+    "available_memory_mb": 0,
+    "compute_capability": null,
+    "driver_version": null,
+    "pci_bus_id": null,
+    "multi_processor_count": 0,
+    "max_threads_per_block": 0,
+    "is_available": true,
+    "platform": "xpu",
+    "extra_info": {
+      "device_count": 1
+    }
+  },
+  "start_time": 1777735226.2203853,
+  "end_time": 1777735250.3817806,
+  "resolution_results": [
+    {
+      "resolution": [
+        1280,
+        720
+      ],
+      "width": 1280,
+      "height": 720,
+      "first_frame_ms": 0.0,
+      "avg_inference_time_ms": 0.0,
+      "min_inference_time_ms": 0.0,
+      "max_inference_time_ms": 0.0,
+      "std_inference_time_ms": 0.0,
+      "fps": 0.0,
+      "peak_memory_mb": 0.0,
+      "avg_memory_mb": 0.0,
+      "hardware_stats": [],
+      "profiler_result": null,
+      "success": false,
+      "error_message": "RuntimeError: Failed to find C compiler. Please specify via CC environment variable or set triton.knobs.build.impl.\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n"
+    }
+  ],
+  "best_resolution": null,
+  "best_fps": 0.0,
+  "recommended_batch_size": 1,
+  "system_load": {}
+}

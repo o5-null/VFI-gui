@@ -494,7 +494,6 @@ class BenchmarkRunner:
             "flavr": ModelType.FLAVR,
             "cain": ModelType.CAIN,
             "xvfi": ModelType.XVFI,
-            "eisai": ModelType.EISAI,
         }
         model_type = model_type_map.get(config.model_type.lower())
         if model_type is None:
@@ -593,11 +592,6 @@ class BenchmarkRunner:
                 "amt-l.pth": "l",
                 "amt-g.pth": "g",
                 "gopro_amt-s.pth": "gopro-s",
-            },
-            "eisai": {
-                "eisai_ssl.pt": "ssl",
-                "eisai_dtm.pt": "dtm",
-                "eisai_anime_interp_full.ckpt": "anime_full",
             },
         }
 

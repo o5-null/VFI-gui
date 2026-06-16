@@ -305,23 +305,6 @@ MODEL_DEFINITIONS: Dict[str, Dict] = {
             ],
         },
     },
-    "eisai": {
-        "display_name": "EISAI",
-        "description": "Efficient Interpolation with Softsplat and DTM for Video Frame Interpolation",
-        "info": "Softsplat | 动漫优化",
-        "sort_order": 14,
-        "checkpoints": {
-            "eisai_ssl.pt": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/eisai_ssl.pt",
-            ],
-            "eisai_dtm.pt": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/eisai_dtm.pt",
-            ],
-            "eisai_anime_interp_full.ckpt": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/eisai_anime_interp_full.ckpt",
-            ],
-        },
-    },
     "xvfi": {
         "display_name": "XVFI",
         "description": "eXtreme Video Frame Interpolation",

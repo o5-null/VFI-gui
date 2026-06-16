@@ -31,7 +31,6 @@ from .ifrnet import IFRNetModel
 from .amt import AMTModel
 from .gmfss import GMFSSModel
 from .xvfi import XVFIModel
-from .eisai import EISAIModel
 
 # 模型注册表
 MODEL_REGISTRY = {
@@ -41,7 +40,6 @@ MODEL_REGISTRY = {
     ModelType.AMT: AMTModel,
     ModelType.GMFSS: GMFSSModel,
     ModelType.XVFI: XVFIModel,
-    ModelType.EISAI: EISAIModel,
 }
 
 
