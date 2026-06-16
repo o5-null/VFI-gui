@@ -1,5 +1,9 @@
-"""VFI-gui UI module exports."""
+"""VFI-gui UI package.
 
-from ui.main_window import MainWindow
+This package contains the MVVM architecture components:
+- viewmodels: Qt-based ViewModels that wrap Core components
+- controllers: Stateless bridges between ViewModels and Core
+- widgets: PyQt6 UI components
+"""
 
-__all__ = ["MainWindow"]
+__all__ = ["viewmodels", "controllers", "widgets"]

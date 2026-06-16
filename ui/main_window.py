@@ -1,811 +1,529 @@
-"""VFI-gui Main Window."""
+"""MainWindow - Main application window for VFI-gui.
 
-import sys
-from pathlib import Path
-from typing import Optional, Dict, Any
+qBittorrent-style layout:
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  Menu Bar:  文件(F)  编辑(E)  视图(V)  工具(T)  帮助(H)        │
+    ├──────────────────────────────────────────────────────────────────┤
+    │  Toolbar: [打开] [添加] [开始] [暂停] [停止] [删除] [设置]     │
+    ├──────────┬───────────────────────────────────────────────────────┤
+    │ 状态     │  TaskTableView                                       │
+    │ 全部(0)  │  ┌───────────────────────────────────────────────┐   │
+    │ 处理中(0)│  │ 名称  │ 状态 │ 进度 │ FPS │ 剩余时间          │   │
+    │ 等待中(0)│  │       │      │      │     │                   │   │
+    │ 已完成(0)│  └───────────────────────────────────────────────┘   │
+    │ 失败(0)  ├───────────────────────────────────────────────────────┤
+    │ 已取消(0)│  TaskDetailsTabs                                      │
+    │──────────│  [通用] [进度] [日志] [GPU]                          │
+    │ 分类     │                                                       │
+    │ 全部(0)  │                                                       │
+    │ 未分类(0)│                                                       │
+    │──────────│                                                       │
+    │ 标签     │                                                       │
+    │ 全部(0)  │                                                       │
+    │ 无标签(0)│                                                       │
+    ├──────────┴───────────────────────────────────────────────────────┤
+    │  状态栏: 就绪 │ DHH:MM │ ↑0.0 kB/s │ NVIDIA RTX 4090           │
+    └──────────────────────────────────────────────────────────────────┘
 
-from PyQt6.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QSplitter,
-    QMenuBar,
-    QMenu,
-    QToolBar,
-    QStatusBar,
-    QFileDialog,
-    QMessageBox,
-    QApplication,
-    QTabWidget,
-    QDialog,
-)
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QAction, QKeySequence, QCloseEvent
+No page switching — single unified view. ConfigPage becomes a dialog.
+"""
+
+from typing import TYPE_CHECKING
+
 from loguru import logger
 
-from core import (
-    Config,
-    Processor,
-    VideoProcessor,  # Backward compatibility
-    QueueManager,
-    ModelManager,
-    tr,
-    get_i18n,
-    BackendType,
-    BackendConfig,
-    ProcessingConfig,
+from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtGui import QAction, QKeySequence
+from PyQt6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QSplitter, QToolBar, QStatusBar, QLabel,
+    QMessageBox, QFileDialog, QDialog,
 )
-from core.model_selection import ModelSelectionManager
-from core.task_orchestrator import TaskOrchestrator
-from ui.controllers.processing_controller import ProcessingController
-from ui.widgets.video_input import VideoInputWidget
-from ui.widgets.pipeline_config import PipelineConfigWidget
-from ui.widgets.progress_panel import ProgressPanel
-from ui.widgets.batch_queue import BatchQueueWidget
-from ui.widgets.model_manager_panel import ModelManagerPanel
-from ui.widgets.dependency_panel import DependencyPanel
-from ui.widgets.benchmark_dialog import BenchmarkDialog
+
+from ui.styles import Theme, IconManager
+from ui.widgets.sidebar.status_filter_panel import StatusFilterPanel
+from ui.widgets.task_list.task_table_view import TaskTableView
+from ui.widgets.details.task_details_tabs import TaskDetailsTabs
+
+if TYPE_CHECKING:
+    from ui.app import VFIApp
 
 
 class MainWindow(QMainWindow):
-    """Main application window for VFI-gui."""
+    """Main window — qBittorrent-style unified layout.
 
-    # Signals
-    video_selected = pyqtSignal(str)
-    processing_started = pyqtSignal()
-    processing_finished = pyqtSignal()
-    processing_cancelled = pyqtSignal()
+    Single view: sidebar + table + details tabs.
+    No page switching. ConfigPage opened as dialog when needed.
+    """
 
-    def __init__(self):
+    def __init__(self, app: "VFIApp"):
         super().__init__()
+        self._app = app
 
-        logger.info("Initializing MainWindow")
+        logger.debug("MainWindow initializing...")
 
-        # Initialize components - use global config provider for consistency
-        from core import get_config
-        self.config = get_config()
-        self.processor: Optional[Processor] = None  # Deprecated - kept for backward compat
-        self.queue_manager = QueueManager()
-        # Create shared model manager (single source of truth)
-        self.model_manager = ModelManager(self.config)
-
-        # NEW: Create TaskOrchestrator and ProcessingController
-        self._orchestrator = TaskOrchestrator(self.config)
-        self._controller = ProcessingController(self._orchestrator, self)
-        
-        # Create shared model selection manager using the same model manager
-        self.model_selection_manager = ModelSelectionManager(
-            self.config, 
-            model_manager=self.model_manager
-        )
-
-        # Setup UI
         self._setup_window()
         self._setup_menubar()
         self._setup_toolbar()
-        self._setup_central_widget()
+        self._setup_central()
         self._setup_statusbar()
-        self._setup_connections()
-
-        # Load saved settings
+        self._connect_signals()
         self._load_settings()
-        
-        # Apply saved language preference
-        self._apply_language_preference()
-        
-        logger.info("MainWindow initialized")
 
-    def _setup_window(self):
-        """Configure main window properties."""
-        self.setWindowTitle(tr("VFI-gui - Video Frame Interpolation"))
-        self.setMinimumSize(1200, 800)
-        self.resize(1400, 900)
+        logger.debug("MainWindow initialized")
 
-        # Restore window geometry if saved
-        geometry = self.config.get("window.geometry")
-        if geometry:
-            self.restoreGeometry(bytes.fromhex(geometry))
+    # ====================
+    # Window Setup
+    # ====================
 
-    def _setup_menubar(self):
-        """Create application menu bar."""
+    def _setup_window(self) -> None:
+        self.setWindowTitle(self.tr("VFI-gui"))
+        self.setMinimumSize(1100, 750)
+
+    # ====================
+    # Menu Bar
+    # ====================
+
+    def _setup_menubar(self) -> None:
         menubar = self.menuBar()
 
         # File menu
-        file_menu = menubar.addMenu(tr("&File"))
-
-        open_action = QAction(tr("&Open Video..."), self)
-        open_action.setShortcut(QKeySequence.StandardKey.Open)
-        open_action.triggered.connect(self._on_open_video)
-        file_menu.addAction(open_action)
-
-        open_folder_action = QAction(tr("Open &Folder..."), self)
-        open_folder_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
-        open_folder_action.triggered.connect(self._on_open_folder)
-        file_menu.addAction(open_folder_action)
-
-        file_menu.addSeparator()
-
-        add_to_queue_action = QAction(tr("&Add to Queue"), self)
-        add_to_queue_action.setShortcut(QKeySequence("Ctrl+Shift+A"))
-        add_to_queue_action.triggered.connect(self._on_add_to_queue)
-        file_menu.addAction(add_to_queue_action)
-
-        file_menu.addSeparator()
-
-        save_settings_action = QAction(tr("&Save Settings"), self)
-        save_settings_action.setShortcut(QKeySequence.StandardKey.Save)
-        save_settings_action.triggered.connect(self._on_save_settings)
-        file_menu.addAction(save_settings_action)
-
-        file_menu.addSeparator()
-
-        exit_action = QAction(tr("E&xit"), self)
-        exit_action.setShortcut(QKeySequence.StandardKey.Quit)
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        self._file_menu = menubar.addMenu(self.tr("文件(&F)"))
+        self._add_menu_action(self._file_menu, self.tr("打开视频..."), self._on_open_video, "Ctrl+O")
+        self._add_menu_action(self._file_menu, self.tr("打开文件夹..."), self._on_open_folder, "Ctrl+Shift+O")
+        self._file_menu.addSeparator()
+        self._add_menu_action(self._file_menu, self.tr("退出"), self.close, "Ctrl+Q")
 
         # Edit menu
-        edit_menu = menubar.addMenu(tr("&Edit"))
+        self._edit_menu = menubar.addMenu(self.tr("编辑(&E)"))
+        self._add_menu_action(self._edit_menu, self.tr("设置..."), self._on_settings, "Alt+O")
 
-        clear_queue_action = QAction(tr("&Clear Queue"), self)
-        clear_queue_action.triggered.connect(self._on_clear_queue)
-        edit_menu.addAction(clear_queue_action)
+        # View menu
+        self._view_menu = menubar.addMenu(self.tr("视图(&V)"))
+        self._add_menu_action(self._view_menu, self.tr("切换工具栏"), self._toggle_toolbar)
+        self._add_menu_action(self._view_menu, self.tr("切换侧边栏"), self._toggle_sidebar)
+        self._add_menu_action(self._view_menu, self.tr("切换详情面板"), self._toggle_details)
 
-        # Language menu
-        language_menu = menubar.addMenu(tr("&Language"))
-        self._setup_language_menu(language_menu)
-
-        # Tools menu
-        tools_menu = menubar.addMenu(tr("&Tools"))
-
-        models_action = QAction(tr("&Model Manager..."), self)
-        models_action.triggered.connect(self._on_model_manager)
-        tools_menu.addAction(models_action)
-
-        tools_menu.addSeparator()
-
-        benchmark_action = QAction(tr("&Device Detection & Benchmark..."), self)
-        benchmark_action.triggered.connect(self._on_benchmark)
-        tools_menu.addAction(benchmark_action)
-
-        tools_menu.addSeparator()
-
-        proxy_action = QAction(tr("&Proxy Settings..."), self)
-        proxy_action.triggered.connect(self._on_proxy_settings)
-        tools_menu.addAction(proxy_action)
-
-        performance_action = QAction(tr("&Performance Settings..."), self)
-        performance_action.triggered.connect(self._on_performance_settings)
-        tools_menu.addAction(performance_action)
+# Tools menu
+        self._tools_menu = menubar.addMenu(self.tr("工具(&T)"))
+        self._add_menu_action(self._tools_menu, self.tr("开始处理"), self._on_start, "Ctrl+S")
+        self._add_menu_action(self._tools_menu, self.tr("添加到队列"), self._on_add_queue, "Ctrl+Shift+A")
+        self._tools_menu.addSeparator()
+        self._add_menu_action(self._tools_menu, self.tr("模型管理器"), self._on_model_manager)
+        self._add_menu_action(self._tools_menu, self.tr("基准测试"), self._on_benchmark)
 
         # Help menu
-        help_menu = menubar.addMenu(tr("&Help"))
+        self._help_menu = menubar.addMenu(self.tr("帮助(&H)"))
+        self._add_menu_action(self._help_menu, self.tr("关于 VFI-gui"), self._on_about)
 
-        about_action = QAction(tr("&About"), self)
-        about_action.triggered.connect(self._on_about)
-        help_menu.addAction(about_action)
+    def _add_menu_action(self, menu, text: str, slot, shortcut: str = "") -> None:
+        """Add action to menu with optional shortcut (type-safe)."""
+        action = QAction(text, self)
+        action.triggered.connect(slot)
+        if shortcut:
+            action.setShortcut(QKeySequence(shortcut))
+        menu.addAction(action)
 
-    def _setup_language_menu(self, menu: QMenu):
-        """Setup language selection menu."""
-        from PyQt6.QtGui import QActionGroup
-        i18n = get_i18n()
-        current_lang = i18n.get_current_language()
-        
-        lang_group = QActionGroup(self)
-        lang_group.setExclusive(True)
-        
-        for lang_code, lang_name in i18n.SUPPORTED_LANGUAGES.items():
-            action = QAction(lang_name, self)
-            action.setData(lang_code)
-            action.setCheckable(True)
-            action.setChecked(lang_code == current_lang)
-            action.triggered.connect(lambda checked, code=lang_code: self._on_language_changed(code))
-            lang_group.addAction(action)
-            menu.addAction(action)
+    # ====================
+    # Toolbar
+    # ====================
 
-    def _setup_toolbar(self):
-        """Create application toolbar."""
-        toolbar = QToolBar(tr("Main Toolbar"))
+    def _setup_toolbar(self) -> None:
+        toolbar = QToolBar(self.tr("主工具栏"))
+        toolbar.setObjectName("mainToolbar")
         toolbar.setMovable(False)
-        self.addToolBar(toolbar)
-
-        # Open action
-        open_action = QAction(tr("Open"), self)
-        open_action.setStatusTip(tr("Open a video file"))
-        open_action.triggered.connect(self._on_open_video)
-        toolbar.addAction(open_action)
-
-        toolbar.addSeparator()
-
-        # Start action
-        self.start_action = QAction(tr("Start"), self)
-        self.start_action.setStatusTip(tr("Start processing"))
-        self.start_action.triggered.connect(self._on_start_processing)
-        toolbar.addAction(self.start_action)
-
-        # Pause action
-        self.pause_action = QAction(tr("Pause"), self)
-        self.pause_action.setStatusTip(tr("Pause processing"))
-        self.pause_action.setEnabled(False)
-        self.pause_action.triggered.connect(self._on_pause_processing)
-        toolbar.addAction(self.pause_action)
-
-        # Cancel action
-        self.cancel_action = QAction(tr("Cancel"), self)
-        self.cancel_action.setStatusTip(tr("Cancel processing"))
-        self.cancel_action.setEnabled(False)
-        self.cancel_action.triggered.connect(self._on_cancel_processing)
-        toolbar.addAction(self.cancel_action)
-
-        toolbar.addSeparator()
-
-        # Add to queue
-        add_queue_action = QAction(tr("Add to Queue"), self)
-        add_queue_action.setStatusTip(tr("Add current video to batch queue"))
-        add_queue_action.triggered.connect(self._on_add_to_queue)
-        toolbar.addAction(add_queue_action)
-
-    def _setup_central_widget(self):
-        """Create the main central widget layout with tab structure."""
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-
-        # Main layout
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-
-        # Create tab widget
-        self.tab_widget = QTabWidget()
-        self.tab_widget.setTabPosition(QTabWidget.TabPosition.North)
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
+        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        toolbar.setStyleSheet(f"""
+            QToolBar {{
+                background-color: {Theme.BG_TERTIARY};
                 border: none;
-                background-color: #1e1e1e;
-            }
-            QTabBar::tab {
-                background-color: #2d2d2d;
-                color: #cccccc;
-                padding: 10px 20px;
-                margin-right: 2px;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
-            }
-            QTabBar::tab:selected {
-                background-color: #0078d4;
-                color: white;
-            }
-            QTabBar::tab:hover:!selected {
-                background-color: #3d3d3d;
-            }
+                border-bottom: 1px solid {Theme.BORDER};
+                padding: 2px 4px;
+                spacing: 4px;
+            }}
+            QToolButton {{
+                background-color: transparent;
+                border: 1px solid transparent;
+                border-radius: {Theme.RADIUS_MD}px;
+                padding: 4px 8px;
+                color: {Theme.TEXT_PRIMARY};
+                font-size: {Theme.FONT_SIZE_MD};
+            }}
+            QToolButton:hover {{
+                background-color: {Theme.BG_HOVER};
+                border: 1px solid {Theme.BORDER};
+            }}
+            QToolButton:pressed {{
+                background-color: {Theme.BG_PRESSED};
+            }}
         """)
 
-        # Create tabs
-        self._create_processing_tab()
-        self._create_models_tab()
-        self._create_dependencies_tab()
+        # Action buttons
+        self._toolbar_actions = {}
 
-        main_layout.addWidget(self.tab_widget)
+        # Open
+        open_action = QAction(IconManager.get("folder-open"), self.tr("打开"), self)
+        open_action.triggered.connect(self._on_open_video)
+        toolbar.addAction(open_action)
+        self._toolbar_actions["open"] = open_action
 
-    def _create_processing_tab(self):
-        """Create the main processing tab."""
-        processing_widget = QWidget()
-        processing_layout = QVBoxLayout(processing_widget)
-        processing_layout.setContentsMargins(0, 0, 0, 0)
-        processing_layout.setSpacing(0)
+        # Add to queue
+        add_action = QAction(IconManager.get("add"), self.tr("添加"), self)
+        add_action.triggered.connect(self._on_add_queue)
+        toolbar.addAction(add_action)
+        self._toolbar_actions["add"] = add_action
 
-        # Main horizontal splitter
-        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        toolbar.addSeparator()
 
-        # Left panel: Video input and pipeline config
-        left_panel = QWidget()
-        left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(8, 8, 8, 8)
-        left_layout.setSpacing(8)
+        # Start
+        start_action = QAction(IconManager.get("play"), self.tr("开始"), self)
+        start_action.triggered.connect(self._on_start)
+        toolbar.addAction(start_action)
+        self._toolbar_actions["start"] = start_action
 
-        # Video input widget
-        self.video_input = VideoInputWidget()
-        left_layout.addWidget(self.video_input)
+        # Pause
+        pause_action = QAction(IconManager.get("pause"), self.tr("暂停"), self)
+        pause_action.triggered.connect(self._on_pause)
+        toolbar.addAction(pause_action)
+        self._toolbar_actions["pause"] = pause_action
 
-        # Pipeline configuration widget (using shared model selection manager)
-        self.pipeline_config = PipelineConfigWidget(self.config, self.model_selection_manager)
-        left_layout.addWidget(self.pipeline_config)
+        # Stop
+        stop_action = QAction(IconManager.get("stop"), self.tr("停止"), self)
+        stop_action.triggered.connect(self._on_stop)
+        toolbar.addAction(stop_action)
+        self._toolbar_actions["stop"] = stop_action
 
-        # Right panel: Progress and queue
-        right_panel = QWidget()
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(8, 8, 8, 8)
-        right_layout.setSpacing(8)
+        toolbar.addSeparator()
 
-        # Progress panel
-        self.progress_panel = ProgressPanel()
-        right_layout.addWidget(self.progress_panel)
+        # Delete
+        delete_action = QAction(IconManager.get("delete"), self.tr("删除"), self)
+        delete_action.triggered.connect(self._on_delete)
+        toolbar.addAction(delete_action)
+        self._toolbar_actions["delete"] = delete_action
 
-        # Batch queue widget
-        self.batch_queue = BatchQueueWidget(self.queue_manager)
-        right_layout.addWidget(self.batch_queue)
+        toolbar.addSeparator()
 
-        # Add panels to splitter
-        main_splitter.addWidget(left_panel)
-        main_splitter.addWidget(right_panel)
+        # Settings
+        settings_action = QAction(IconManager.get("settings"), self.tr("设置"), self)
+        settings_action.triggered.connect(self._on_settings)
+        toolbar.addAction(settings_action)
+        self._toolbar_actions["settings"] = settings_action
 
-        # Set initial sizes (55% left, 45% right)
-        main_splitter.setSizes([700, 500])
+        self.addToolBar(toolbar)
+        self._toolbar = toolbar
 
-        processing_layout.addWidget(main_splitter)
+    # ====================
+    # Central Layout
+    # ====================
 
-        # Add tab
-        self.tab_widget.addTab(processing_widget, tr("Processing"))
+    def _setup_central(self) -> None:
+        """Setup qBittorrent-style 3-zone layout."""
+        vms = self._app.viewmodels
 
-    def _create_models_tab(self):
-        """Create the models management tab."""
-        models_dir = self.config.get("paths.models_dir", str(Path(__file__).parent.parent / "models"))
-        # Pass shared model manager to ensure consistency
-        self.model_manager_panel = ModelManagerPanel(
-            self.config, 
-            models_dir, 
-            model_manager=self.model_manager
-        )
+        # Main horizontal splitter: sidebar | (table + details)
+        self._h_splitter = QSplitter()
+        self._h_splitter.setOrientation(Qt.Orientation.Horizontal)
 
-        # Connect signals
-        self.model_manager_panel.model_downloaded.connect(self._on_model_downloaded)
-        self.model_manager_panel.model_deleted.connect(self._on_model_deleted)
-        
-        # Connect to shared model selection manager for automatic refresh
-        self.model_manager_panel.model_downloaded.connect(
-            lambda mt, ckpt: self.model_selection_manager.refresh()
-        )
-        self.model_manager_panel.model_deleted.connect(
-            lambda mt, ckpt: self.model_selection_manager.refresh()
-        )
+        # Left: StatusFilterPanel
+        self._sidebar = StatusFilterPanel(vms.queue, self)
+        self._h_splitter.addWidget(self._sidebar)
 
-        self.tab_widget.addTab(self.model_manager_panel, tr("Models"))
+        # Right: vertical splitter for table + details
+        self._v_splitter = QSplitter()
+        self._v_splitter.setOrientation(Qt.Orientation.Vertical)
 
-    def _create_dependencies_tab(self):
-        """Create the dependencies management tab."""
-        self.dependency_panel = DependencyPanel(self.config)
-        self.tab_widget.addTab(self.dependency_panel, tr("Dependencies"))
+        # Top: TaskTableView
+        self._task_table = TaskTableView(vms.queue, self)
+        self._v_splitter.addWidget(self._task_table)
 
-    def _setup_statusbar(self):
-        """Create application status bar."""
-        self.statusbar = QStatusBar()
-        self.setStatusBar(self.statusbar)
-        self.statusbar.showMessage(tr("Ready"))
+        # Bottom: TaskDetailsTabs
+        self._details_tabs = TaskDetailsTabs(vms, self)
+        self._v_splitter.addWidget(self._details_tabs)
 
-    def _setup_connections(self):
-        """Connect signals and slots."""
-        # Video input signals
-        self.video_input.video_selected.connect(self._on_video_selected)
-        self.video_input.input_type_changed.connect(self._on_input_type_changed)
+        # Set vertical splitter sizes (table:details = 3:1)
+        self._v_splitter.setStretchFactor(0, 3)
+        self._v_splitter.setStretchFactor(1, 1)
+        self._v_splitter.setSizes([450, 150])
 
-        # Pipeline config signals
-        self.pipeline_config.config_changed.connect(self._on_config_changed)
+        self._h_splitter.addWidget(self._v_splitter)
 
-        # Progress panel signals
-        self.progress_panel.cancel_requested.connect(self._on_cancel_processing)
+        # Set horizontal splitter sizes (sidebar:main = 1:5)
+        self._h_splitter.setStretchFactor(0, 0)
+        self._h_splitter.setStretchFactor(1, 1)
+        self._h_splitter.setSizes([200, 800])
 
-        # Batch queue signals
-        self.batch_queue.start_batch_requested.connect(self._on_start_batch)
-        self.batch_queue.item_selected.connect(self._on_queue_item_selected)
+        self.setCentralWidget(self._h_splitter)
 
-        # Language change signal
-        get_i18n().language_changed.connect(self._on_language_changed_signal)
+    # ====================
+    # Status Bar
+    # ====================
 
-        # NEW: Connect ProcessingController signals
-        self._controller.progress_updated.connect(self.progress_panel.update_progress)
-        self._controller.processing_finished.connect(self._on_processing_finished_new)
-        self._controller.error_occurred.connect(self._on_processing_error_new)
-        self._controller.processing_cancelled.connect(self._on_processing_cancelled_new)
-        self._controller.state_changed.connect(self._on_state_changed_new)
+    def _setup_statusbar(self) -> None:
+        statusbar = QStatusBar()
+        statusbar.setStyleSheet(f"""
+            QStatusBar {{
+                background-color: {Theme.BG_TERTIARY};
+                border-top: 1px solid {Theme.BORDER};
+                color: {Theme.TEXT_SECONDARY};
+                font-size: {Theme.FONT_SIZE_SM};
+                padding: 2px;
+            }}
+        """)
 
-    def _load_settings(self):
-        """Load saved settings from config."""
-        # Load pipeline config into UI
-        pipeline_config = self.config.get_pipeline_config()
-        self.pipeline_config.load_config(pipeline_config)
+        # State label
+        self._state_label = QLabel(self.tr("就绪"))
+        statusbar.addWidget(self._state_label)
 
-    def _save_settings(self):
-        """Save current settings to config."""
-        # Save pipeline config from UI
-        pipeline_config = self.pipeline_config.get_config()
-        self.config.set_pipeline_config(pipeline_config)
+        # Separator
+        sep1 = QLabel(" │ ")
+        sep1.setStyleSheet(f"color: {Theme.BORDER};")
+        statusbar.addWidget(sep1)
 
-        # Save window geometry
-        self.config.ui.set("window_geometry", self.saveGeometry().toHex().data().decode())
+        # Speed / FPS label
+        self._speed_label = QLabel("0.0 fps")
+        statusbar.addWidget(self._speed_label)
 
-        # Persist to file
-        self.config.save()
-    
-    def _apply_language_preference(self):
-        """Apply saved language preference from config."""
-        saved_lang = self.config.get_language()
-        if saved_lang:
-            get_i18n().set_language(saved_lang)
-    
-    def _retranslate_ui(self):
-        """Retranslate all UI elements after language change."""
-        self.setWindowTitle(tr("VFI-gui - Video Frame Interpolation"))
-        self.statusbar.showMessage(tr("Ready"))
-        
-        # Rebuild menu bar
-        self.menuBar().clear()
-        self._setup_menubar()
-        
-        # Update tab titles
-        self.tab_widget.setTabText(0, tr("Processing"))
-        self.tab_widget.setTabText(1, tr("Models"))
-        self.tab_widget.setTabText(2, tr("Dependencies"))
-        
-        # Refresh widgets
-        self.video_input.retranslate_ui()
-        self.pipeline_config.retranslate_ui()
-        self.progress_panel.retranslate_ui()
-        self.batch_queue.retranslate_ui()
-        self.model_manager_panel.retranslate_ui()
-        self.dependency_panel.retranslate_ui()
+        # Separator
+        sep2 = QLabel(" │ ")
+        sep2.setStyleSheet(f"color: {Theme.BORDER};")
+        statusbar.addWidget(sep2)
 
-    # === Action handlers ===
+        # Queue count
+        self._queue_label = QLabel("0 / 0")
+        statusbar.addWidget(self._queue_label)
 
-    def _on_open_video(self):
-        """Handle open video action."""
-        file_path, _ = QFileDialog.getOpenFileName(
+        # Device info (right side)
+        best_device = self._app.viewmodels.device.get_best_device()
+        self._device_label = QLabel(best_device.name if best_device else "CPU")
+        statusbar.addPermanentWidget(self._device_label)
+
+        self.setStatusBar(statusbar)
+
+    # ====================
+    # Signal Connections
+    # ====================
+
+    def _connect_signals(self) -> None:
+        vms = self._app.viewmodels
+
+        # Task state → status bar + toolbar button states
+        vms.task.state_changed.connect(self._on_task_state_changed)
+
+        # Device changes → status bar
+        vms.device.current_device_changed.connect(self._on_device_changed)
+
+        # Sidebar filter → task table filter
+        self._sidebar.filter_changed.connect(self._task_table.set_filter)
+
+        # Task table selection → details tabs
+        self._task_table.selection_changed.connect(self._on_task_selected)
+
+        # Queue counts → status bar
+        vms.queue.total_count_changed.connect(self._on_queue_count_changed)
+        vms.queue.completed_count_changed.connect(self._on_queue_count_changed)
+
+        # FPS → status bar
+        vms.task.fps_changed.connect(self._on_fps_changed)
+
+    # ====================
+    # Signal Handlers
+    # ====================
+
+    def _on_task_state_changed(self, state: str) -> None:
+        """Handle task state change."""
+        logger.debug(f"Task state changed: {state}")
+
+        state_map = {
+            "idle": self.tr("就绪"),
+            "loading": self.tr("加载中..."),
+            "processing": self.tr("处理中"),
+            "paused": self.tr("已暂停"),
+            "completed": self.tr("已完成"),
+            "failed": self.tr("失败"),
+            "cancelled": self.tr("已取消"),
+            "cancelling": self.tr("取消中..."),
+        }
+
+        state_text = state_map.get(state, state)
+        self._state_label.setText(state_text)
+
+        # Update toolbar button states
+        is_running = state in ("loading", "processing", "paused")
+        self._toolbar_actions["start"].setEnabled(not is_running)
+        self._toolbar_actions["pause"].setEnabled(is_running)
+        self._toolbar_actions["stop"].setEnabled(is_running)
+
+        # Update pause button text
+        if state == "paused":
+            self._toolbar_actions["pause"].setText(self.tr("继续"))
+        else:
+            self._toolbar_actions["pause"].setText(self.tr("暂停"))
+
+    def _on_device_changed(self, device_name: str) -> None:
+        self._device_label.setText(device_name)
+
+    def _on_task_selected(self, item_index: int) -> None:
+        """Handle task selection in table."""
+        if item_index >= 0:
+            item = self._app.viewmodels.queue.item_at(item_index)
+            self._details_tabs.update_item(item)
+        else:
+            self._details_tabs.update_item(None)
+
+    def _on_queue_count_changed(self, _=None) -> None:
+        """Update queue count in status bar."""
+        vm = self._app.viewmodels.queue
+        completed = vm.completed_count
+        total = vm.total_count
+        self._queue_label.setText(f"{completed}/{total}")
+
+    def _on_fps_changed(self, fps: float) -> None:
+        """Update FPS in status bar."""
+        self._speed_label.setText(f"{fps:.1f} fps")
+
+    # ====================
+    # Menu/Toolbar Handlers
+    # ====================
+
+    def _on_open_video(self) -> None:
+        logger.debug("Open Video clicked")
+        video_path, _ = QFileDialog.getOpenFileName(
             self,
-            tr("Select Video File"),
+            self.tr("选择视频"),
             "",
-            tr("Video Files (*.mp4 *.mkv *.avi *.webm *.mov *.flv);;All Files (*)"),
+            self.tr("视频文件 (*.mp4 *.mkv *.avi *.mov *.webm *.flv *.wmv)"),
         )
-        if file_path:
-            self.video_input.set_video_path(file_path)
-
-    def _on_open_folder(self):
-        """Handle open folder action for batch processing."""
-        folder_path = QFileDialog.getExistingDirectory(
-            self,
-            tr("Select Folder with Videos"),
-        )
-        if folder_path:
-            # Add all video files from folder to queue
-            video_extensions = [".mp4", ".mkv", ".avi", ".webm", ".mov", ".flv"]
-            folder = Path(folder_path)
-            video_files = [
-                str(f)
-                for f in folder.iterdir()
-                if f.suffix.lower() in video_extensions
-            ]
-            if video_files:
-                for video_file in video_files:
-                    self.queue_manager.add_item(video_file)
-                self.batch_queue.refresh()
-                self.statusbar.showMessage(tr("Added {} videos to queue").format(len(video_files)))
-            else:
-                QMessageBox.information(
-                    self,
-                    tr("No Videos Found"),
-                    tr("No video files found in the selected folder."),
-                )
-
-    def _on_video_selected(self, file_path: str):
-        """Handle video selection."""
-        self._current_video = file_path
-        self.statusbar.showMessage(tr("Selected: {}").format(Path(file_path).name))
-        self.video_selected.emit(file_path)
-
-    def _on_input_type_changed(self, is_image_sequence: bool):
-        """Handle input type change (video file vs image sequence).
-        
-        Automatically switches output mode to match input type.
-        
-        Args:
-            is_image_sequence: True if input is image sequence, False if video file.
-        """
-        # Get the codec settings widget from pipeline config
-        codec_settings = self.pipeline_config.codec_settings
-        
-        # Switch output mode to match input type
-        if is_image_sequence:
-            # Set output mode to "images"
-            for i in range(codec_settings.output_mode_combo.count()):
-                if codec_settings.output_mode_combo.itemData(i) == "images":
-                    codec_settings.output_mode_combo.setCurrentIndex(i)
-                    break
-        else:
-            # Set output mode to "video"
-            for i in range(codec_settings.output_mode_combo.count()):
-                if codec_settings.output_mode_combo.itemData(i) == "video":
-                    codec_settings.output_mode_combo.setCurrentIndex(i)
-                    break
-
-    def _on_config_changed(self):
-        """Handle pipeline configuration changes."""
-        self._save_settings()
-
-    def _on_add_to_queue(self):
-        """Add current video to batch queue."""
-        video_path = self.video_input.get_video_path()
         if video_path:
-            config = self.pipeline_config.get_config()
-            self.queue_manager.add_item(video_path, config)
-            self.batch_queue.refresh()
-            self.statusbar.showMessage(tr("Added to queue"))
+            logger.info(f"Video selected: {video_path}")
+            self._app.viewmodels.pipeline.set_video_path(video_path)
 
-    def _on_start_processing(self):
-        """Start processing the current video."""
-        video_path = self.video_input.get_video_path()
-        if not video_path:
-            QMessageBox.warning(self, tr("No Video"), tr("Please select a video file first."))
-            return
+    def _on_open_folder(self) -> None:
+        logger.debug("Open Folder clicked")
+        folder_path = QFileDialog.getExistingDirectory(self, self.tr("选择文件夹"))
+        if folder_path:
+            logger.info(f"Folder selected: {folder_path}")
 
-        self._start_processing(video_path)
+    def _on_start(self) -> None:
+        """Start processing — open AddTaskDialog, then start if confirmed."""
+        from ui.widgets.dialogs.add_task_dialog import AddTaskDialog
 
-    def _start_processing(self, video_path: str, custom_config: Optional[Dict[str, Any]] = None):
-        """Start processing a video file using TaskOrchestrator via ProcessingController."""
-        logger.info(f"Starting processing: {video_path}")
+        dialog = AddTaskDialog(self._app.viewmodels, self._app.controllers, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.action == "start":
+            video_path = self._app.viewmodels.pipeline.video_path
+            pipeline_config = self._app.viewmodels.pipeline.to_pipeline_config()
+            self._app.controllers.processing.start_task(video_path, pipeline_config)
 
-        # Get pipeline config (now passed directly to orchestrator)
-        pipeline_config = custom_config or self.pipeline_config.get_config()
+    def _on_add_queue(self) -> None:
+        """Add task to queue — open AddTaskDialog, then add if confirmed."""
+        from ui.widgets.dialogs.add_task_dialog import AddTaskDialog
 
-        # Use ProcessingController to start processing
-        # This delegates to TaskOrchestrator which handles backend + IO
-        task_id = self._controller.start_processing(video_path, pipeline_config)
-
-        if task_id:
-            # Update UI state
-            self._set_processing_state(True)
-            self.processing_started.emit()
-            self.statusbar.showMessage(tr("Processing started..."))
-        else:
-            logger.error(f"Failed to start processing: {video_path}")
-
-    def _on_pause_processing(self):
-        """Pause/resume processing using ProcessingController."""
-        state = self._controller.get_state()
-        if state == "paused":
-            self._controller.resume_processing()
-            self.pause_action.setText(tr("Pause"))
-            self.statusbar.showMessage(tr("Processing resumed"))
-        elif state == "running":
-            self._controller.pause_processing()
-            self.pause_action.setText(tr("Resume"))
-            self.statusbar.showMessage(tr("Processing paused"))
-
-    def _on_cancel_processing(self):
-        """Cancel processing using ProcessingController."""
-        if self._controller.is_processing():
-            reply = QMessageBox.question(
-                self,
-                tr("Cancel Processing"),
-                tr("Are you sure you want to cancel processing?"),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                self.statusbar.showMessage(tr("Cancelling processing..."))
-                self._controller.cancel_processing()
-
-    def _on_processing_finished(self, output_path: str):
-        """Handle processing completion."""
-        logger.info(f"Processing finished: {output_path}")
-        self._set_processing_state(False)
-        self.processing_finished.emit()
-        self.statusbar.showMessage(tr("Processing complete: {}").format(output_path))
-
-        QMessageBox.information(
-            self,
-            tr("Processing Complete"),
-            tr("Output saved to:\n{}").format(output_path),
-        )
-
-        # Check if more items in queue
-        if self.queue_manager.has_pending():
-            self._process_next_in_queue()
-
-    def _on_processing_error(self, error_message: str):
-        """Handle processing error (legacy handler for Processor signals)."""
-        logger.error(f"Processing error: {error_message}")
-        self._set_processing_state(False)
-        self.statusbar.showMessage(tr("Processing failed"))
-
-        QMessageBox.critical(
-            self,
-            tr("Processing Error"),
-            tr("An error occurred during processing:\n\n{}").format(error_message),
-        )
-
-    # ====================
-    # NEW: Handlers for ProcessingController signals
-    # ====================
-
-    def _on_processing_finished_new(self, success: bool, message: str):
-        """Handle processing completion from TaskOrchestrator."""
-        if success:
-            logger.info(f"Processing finished: {message}")
-            self._set_processing_state(False)
-            self.processing_finished.emit()
-            self.statusbar.showMessage(tr("Processing complete: {}").format(message))
-
-            QMessageBox.information(
-                self,
-                tr("Processing Complete"),
-                tr("Output saved to:\n{}").format(message),
-            )
-        else:
-            # Error case - handled by _on_processing_error_new
-            pass
-
-    def _on_processing_error_new(self, error_message: str):
-        """Handle processing error from TaskOrchestrator."""
-        logger.error(f"Processing error: {error_message}")
-        self._set_processing_state(False)
-        self.statusbar.showMessage(tr("Processing failed"))
-
-        QMessageBox.critical(
-            self,
-            tr("Processing Error"),
-            tr("An error occurred during processing:\n\n{}").format(error_message),
-        )
-
-    def _on_processing_cancelled_new(self):
-        """Handle processing cancelled from TaskOrchestrator."""
-        logger.info("Processing cancelled")
-        self._set_processing_state(False)
-        self.processing_cancelled.emit()
-        self.statusbar.showMessage(tr("Processing cancelled"))
-
-    def _on_state_changed_new(self, state: str):
-        """Handle orchestrator state change."""
-        if state == "paused":
-            self.pause_action.setText(tr("Resume"))
-        else:
-            self.pause_action.setText(tr("Pause"))
-
-    # ====================
-
-    def _set_processing_state(self, processing: bool):
-        """Update UI state based on processing status."""
-        self.start_action.setEnabled(not processing)
-        self.pause_action.setEnabled(processing)
-        self.cancel_action.setEnabled(processing)
-        self.video_input.setEnabled(not processing)
-        self.pipeline_config.setEnabled(not processing)
-
-    def _on_start_batch(self):
-        """Start batch processing."""
-        if self.queue_manager.has_pending():
-            self._process_next_in_queue()
-
-    def _process_next_in_queue(self):
-        """Process the next item in the queue."""
-        item = self.queue_manager.get_next_pending()
-        if item:
-            self._start_processing(item.video_path, item.config)
-
-    def _on_queue_item_selected(self, index: int):
-        """Handle queue item selection."""
-        item = self.queue_manager.get_item(index)
-        if item:
-            self.video_input.set_video_path(item.video_path)
-            self.pipeline_config.load_config(item.config)
-
-    def _on_clear_queue(self):
-        """Clear the batch queue."""
-        reply = QMessageBox.question(
-            self,
-            tr("Clear Queue"),
-            tr("Are you sure you want to clear the queue?"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
-            self.queue_manager.clear()
-            self.batch_queue.refresh()
-
-    def _on_model_manager(self):
-        """Switch to model manager tab."""
-        self.tab_widget.setCurrentIndex(1)  # Switch to Models tab
-
-    def _on_proxy_settings(self):
-        """Open proxy settings dialog."""
-        from ui.widgets.proxy_settings_dialog import ProxySettingsDialog
-        dialog = ProxySettingsDialog(self)
-        dialog.exec()
-
-    def _on_performance_settings(self):
-        """Open performance settings dialog."""
-        from ui.widgets.performance_settings_dialog import PerformanceSettingsDialog
-        dialog = PerformanceSettingsDialog(self, self.settings_controller)
+        dialog = AddTaskDialog(self._app.viewmodels, self._app.controllers, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            # Apply performance settings to backend config
-            settings = dialog.get_settings()
-            self._apply_performance_settings(settings)
-            self.statusbar.showMessage(tr("Performance settings applied"))
+            video_path = self._app.viewmodels.pipeline.video_path
+            pipeline_config = self._app.viewmodels.pipeline.to_pipeline_config()
+            self._app.controllers.queue.add_to_queue(video_path, pipeline_config)
 
-    def _apply_performance_settings(self, settings: dict):
-        """Apply performance settings to backend configuration.
+            # If user chose "start", also start processing
+            if dialog.action == "start":
+                self._app.controllers.processing.start_task(video_path, pipeline_config)
 
-        DEPRECATED: This method is deprecated. Performance settings should now
-        be passed via pipeline_config to TaskOrchestrator instead.
+    def _on_pause(self) -> None:
+        """Toggle pause/resume."""
+        state = self._app.viewmodels.task.state
+        if state == "paused":
+            self._app.controllers.processing.resume_task()
+        elif state in ("loading", "processing"):
+            self._app.controllers.processing.pause_task()
 
-        Args:
-            settings: Performance settings dictionary
+    def _on_stop(self) -> None:
+        """Stop current task."""
+        self._app.controllers.processing.cancel_task()
 
-        Note:
-            The new architecture passes these settings through the pipeline config
-            to TaskOrchestrator rather than modifying a shared backend_config.
-        """
-        import warnings
-        warnings.warn(
-            "_apply_performance_settings() is deprecated. "
-            "Performance settings should be set via the pipeline config UI.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        logger.warning("Performance settings are now passed via pipeline config to TaskOrchestrator")
+    def _on_delete(self) -> None:
+        """Delete selected task from queue."""
+        item = self._task_table.get_selected_item()
+        if item:
+            self._app.controllers.queue.remove_item(item.index)
 
-    def _on_model_downloaded(self, model_type: str, ckpt_name: str):
-        """Handle model download completion."""
-        logger.info(f"Model downloaded: {model_type}/{ckpt_name}")
-        self.model_manager_panel.refresh()
-
-    def _on_model_deleted(self, model_type: str, ckpt_name: str):
-        """Handle model deletion."""
-        logger.info(f"Model deleted: {model_type}/{ckpt_name}")
-        self.model_manager_panel.refresh()
-
-    def _on_save_settings(self):
-        """Save current settings."""
-        self._save_settings()
-        self.statusbar.showMessage(tr("Settings saved"))
-
-    def _on_benchmark(self):
-        """Show benchmark and device detection dialog."""
-        dialog = BenchmarkDialog(self)
+    def _on_settings(self) -> None:
+        from ui.widgets.dialogs import SettingsDialog
+        dialog = SettingsDialog(self._app.config, self)
         dialog.exec()
 
-    def _on_about(self):
-        """Show about dialog."""
-        QMessageBox.about(
-            self,
-            tr("About VFI-gui"),
-            """<h3>VFI-gui</h3>
-            <p>{}</p>
-            <p>Version 0.1.0</p>
-            <p>{}</p>
-            <p>{}</p>""".format(
-                tr("Video Frame Interpolation GUI"),
-                tr("A PyQt6 desktop application for VSGAN-tensorrt-docker video processing workflow."),
-                tr("Supports RIFE interpolation, ESRGAN/CUGAN upscaling, and scene detection."),
-            ),
-        )
-    
-    def _on_language_changed(self, language_code: str):
-        """Handle language selection change."""
-        if get_i18n().set_language(language_code):
-            self.config.set_language(language_code)
-            self.config.save()
+    def _on_about(self) -> None:
+        from ui.widgets.dialogs import AboutDialog
+        dialog = AboutDialog(self)
+        dialog.exec()
+
+    def _on_benchmark(self) -> None:
+        from ui.widgets.dialogs import BenchmarkDialog
+        dialog = BenchmarkDialog(self._app.model_selection, self)
+        dialog.exec()
+
+    def _on_model_manager(self) -> None:
+        """Open Model Manager dialog."""
+        from ui.widgets.dialogs import ModelManagerDialog
+        dialog = ModelManagerDialog(self._app.model_manager, self)
+        dialog.exec()
+
+    def _toggle_toolbar(self) -> None:
+        self._toolbar.setVisible(not self._toolbar.isVisible())
+
+    def _toggle_sidebar(self) -> None:
+        self._sidebar.setVisible(not self._sidebar.isVisible())
+
+    def _toggle_details(self) -> None:
+        self._details_tabs.setVisible(not self._details_tabs.isVisible())
+
+    # ====================
+    # Settings Persistence
+    # ====================
+
+    def _load_settings(self) -> None:
+        geometry = self._app.controllers.settings.load_window_geometry()
+        if geometry:
+            self.restoreGeometry(geometry)
+
+        state = self._app.controllers.settings.load_window_state()
+        if state:
+            self.restoreState(state)
+
+    # ====================
+    # Window Events
+    # ====================
+
+    def closeEvent(self, a0) -> None:
+        logger.info("MainWindow closing...")
+
+        geometry_data = self.saveGeometry().data()
+        self._app.controllers.settings.save_window_geometry(geometry_data)
+
+        state_data = self.saveState().data()
+        self._app.controllers.settings.save_window_state(state_data)
+
+        self._app.shutdown()
+        super().closeEvent(a0)
+
+    def changeEvent(self, a0: QEvent | None) -> None:
+        if a0 is not None and a0.type() == QEvent.Type.LanguageChange:
             self._retranslate_ui()
-    
-    def _on_language_changed_signal(self, language_code: str):
-        """Handle language change signal from i18n manager."""
-        self._retranslate_ui()
+        super().changeEvent(a0)
 
-    def closeEvent(self, event: QCloseEvent):
-        """Handle window close event."""
-        # Check if processing is in progress using ProcessingController
-        if self._controller.is_processing():
-            reply = QMessageBox.question(
-                self,
-                tr("Processing in Progress"),
-                tr("Processing is still running. Cancel and exit?"),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if reply == QMessageBox.StandardButton.No:
-                event.ignore()
-                return
+    def _retranslate_ui(self) -> None:
+        """Retranslate UI text for current locale."""
+        self.setWindowTitle(self.tr("VFI-gui"))
+        self._toolbar.setWindowTitle(self.tr("主工具栏"))
+        self._state_label.setText(self.tr("就绪"))
 
-            # Cancel via controller
-            self._controller.cancel_processing()
+        # Toolbar actions
+        if hasattr(self, "_toolbar_actions"):
+            self._toolbar_actions["open"].setText(self.tr("打开"))
+            self._toolbar_actions["add"].setText(self.tr("添加"))
+            self._toolbar_actions["start"].setText(self.tr("开始"))
+            self._toolbar_actions["pause"].setText(self.tr("暂停"))
+            self._toolbar_actions["stop"].setText(self.tr("停止"))
+            self._toolbar_actions["delete"].setText(self.tr("删除"))
+            self._toolbar_actions["settings"].setText(self.tr("设置"))
 
-        # Shutdown orchestrator gracefully
-        self._orchestrator.shutdown()
 
-        self._save_settings()
-        event.accept()
+__all__ = ["MainWindow"]
