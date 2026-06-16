@@ -66,16 +66,35 @@ def main():
     app.setOrganizationName("VFI")
     
     logger.debug("Setting up dark theme")
-    # Set dark theme
-    from ui.styles.stylesheet import DARK_THEME
-    app.setStyleSheet(DARK_THEME)
+    from ui.styles import apply_dark_theme
+    apply_dark_theme(app)
+    
+    # Install Qt translator for self.tr() support (bridges gettext → Qt)
+    logger.debug("Installing Qt translator")
+    from core.i18n_qt import install_translator
+    current_language = get_i18n().get_current_language()
+    translator = install_translator(current_language)
+    if translator:
+        logger.info(f"Qt translator installed for: {current_language}")
+    
+    # Create VFIApp singleton (must happen after QApplication for QTimer)
+    logger.info("Initializing VFIApp...")
+    from ui.app import get_app
+    vfi = get_app()
+    
+    # Start device polling
+    vfi.start_device_polling()
     
     logger.info("Creating main window")
-    window = MainWindow()
+    window = MainWindow(vfi)
     window.show()
     
     logger.info("Application ready")
-    sys.exit(app.exec())
+    ret = app.exec()
+    
+    # VFIApp shutdown is handled by MainWindow.closeEvent
+    logger.info("VFI-gui exiting")
+    sys.exit(ret)
 
 
 if __name__ == "__main__":

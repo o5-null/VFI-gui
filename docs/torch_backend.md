@@ -1,13 +1,13 @@
-# Torch Backend 设计文档
+# PyTorch Models 设计文档
 
 ## 概述
 
-`torch_backend` 是 VFI-gui 的 PyTorch 推理后端，提供统一的模型管理、帧处理和 GUI 集成接口。
+`pytorch_models` 是 VFI-gui 的 PyTorch 推理后端，提供统一的模型管理、帧处理和 GUI 集成接口。
 
 ## 架构
 
 ```
-core/torch_backend/
+core/pytorch_models/
 ├── __init__.py             # 模块入口，导出所有接口
 ├── base.py                 # 基础抽象类和工具函数
 ├── model_manager.py        # 模型加载、缓存、下载管理
@@ -29,7 +29,7 @@ core/torch_backend/
 模型配置类，包含所有推理参数：
 
 ```python
-from core.torch_backend import VFIConfig, ModelType
+from core.pytorch_models import VFIConfig, ModelType
 
 config = VFIConfig(
     model_type=ModelType.RIFE,
@@ -75,13 +75,13 @@ class BaseVFIModel(ABC):
 ### 3. 模型注册表
 
 ```python
-from core.torch_backend import MODEL_REGISTRY, get_model, ModelType
+from core.pytorch_models import MODEL_REGISTRY, get_model, ModelType
 
 # 获取模型
 model = get_model(ModelType.RIFE, config)
 
 # 或直接使用类
-from core.torch_backend import RIFEModel
+from core.pytorch_models import RIFEModel
 model = RIFEModel(config)
 model.load_model("models/rife/rife49.pth")
 ```
@@ -89,7 +89,7 @@ model.load_model("models/rife/rife49.pth")
 ### 4. 工具函数
 
 ```python
-from core.torch_backend import (
+from core.pytorch_models import (
     get_device,           # 获取设备 (cuda/cpu/mps)
     clear_cache,          # 清理 CUDA 缓存
     preprocess_frames,    # NHWC -> NCHW
@@ -110,59 +110,84 @@ from core.torch_backend import (
 
 ## GUI 集成
 
-### TorchProcessor
+### TorchBackend
 
-与 `VideoProcessor` 接口兼容的 PyTorch 处理器：
+与 `BaseBackend` 接口兼容的 PyTorch 后端：
 
 ```python
-from core.torch_processor import TorchProcessor
+from core.backends import BackendFactory, BackendType, BackendConfig
 
-processor = TorchProcessor(
-    video_path="input.mp4",
-    config={
-        "interpolation": {
-            "model_type": "rife",
-            "model_version": "4.22",
-            "multi": 2,
-            "scale": 1.0,
-        },
-        "output": {
-            "codec": "libx265",
-            "quality": 22,
-            "preset": "medium",
-        },
+# 创建后端配置
+config = BackendConfig(
+    backend_type=BackendType.TORCH,
+    models_dir="models",
+    output_dir="output",
+    device="auto",  # "cuda:0", "xpu:0", "cpu"
+    precision="fp16",  # "fp32", "fp16", "bf16"
+)
+
+# 创建后端实例
+backend = BackendFactory.create(BackendType.TORCH, config)
+
+# 初始化
+backend.initialize()
+
+# 处理视频
+from core.backends import ProcessingConfig
+
+processing_config = ProcessingConfig(
+    interpolation={
+        "enabled": True,
+        "model_type": "rife",
+        "model_version": "4.22",
+        "multi": 2,
+        "scale": 1.0,
     },
-    torch_config={
-        "models_dir": "models",
-        "output_dir": "output",
-        "fp16": True,
-        "clear_cache_every": 10,
+    output={
+        "codec": "libx265",
+        "quality": 22,
     },
 )
 
-# 连接信号
-processor.progress_updated.connect(on_progress)
-processor.stage_changed.connect(on_stage)
-processor.log_message.connect(on_log)
-processor.finished.connect(on_finished)
-processor.error_occurred.connect(on_error)
+result = backend.process(
+    video_path="input.mp4",
+    processing_config=processing_config,
+    progress_callback=lambda cur, total, fps: print(f"{cur}/{total} @ {fps:.1f} fps"),
+)
 
-# 控制
-processor.start()      # 开始
-processor.pause()      # 暂停
-processor.resume()     # 恢复
-processor.cancel()     # 取消
+if result.success:
+    print(f"Output: {result.output_path}")
+else:
+    print(f"Error: {result.error_message}")
+```
+
+### TaskOrchestrator
+
+高级任务编排器，提供完整的工作流管理：
+
+```python
+from core.task_orchestrator import TaskOrchestrator
+
+orchestrator = TaskOrchestrator(config)
+
+# 处理单个视频
+orchestrator.process_video("input.mp4", processing_config)
+
+# 批量处理
+orchestrator.process_batch(["video1.mp4", "video2.mp4"], processing_config)
 ```
 
 ### 信号
 
-| 信号 | 参数 | 描述 |
+通过 Blinker 事件系统订阅：
+
+| 事件 | 参数 | 描述 |
 |------|------|------|
-| progress_updated | (current, total, fps) | 进度更新 |
-| stage_changed | (stage_name) | 阶段变化 |
-| log_message | (message) | 日志消息 |
-| finished | (output_path) | 处理完成 |
-| error_occurred | (error_message) | 发生错误 |
+| processing_progress | (current, total, fps) | 进度更新 |
+| processing_stage | (stage_name) | 阶段变化 |
+| processing_log | (message) | 日志消息 |
+| processing_complete | (output_path) | 处理完成 |
+| processing_error | (error_message) | 发生错误 |
 
 ## 模型文件结构
 
@@ -242,7 +267,7 @@ torch_config = {
 }
 
 # 手动清理
-from core.torch_backend import clear_cache
+from core.pytorch_models import clear_cache
 clear_cache()
 ```
 

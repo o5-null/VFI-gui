@@ -4,12 +4,18 @@ PyQt6>=6.5.0
 # Logging
 loguru>=0.7.0
 
+# Event system (Qt-independent signals)
+blinker>=1.7.0
+
 # PyTorch backend dependencies
 einops>=0.7.0
 torch>=2.0.0
 torchvision>=0.15.0
 opencv-python>=4.8.0
 numpy>=1.24.0
+
+# Video IO (PyAV-based)
+av>=13.0.0
 
 # ============================================
 # VapourSynth requires separate installation on Windows

@@ -4,7 +4,7 @@ from core.config.base_config import BaseConfig
 
 
 DEFAULT_UI_SETTINGS = {
-    "language": "",
+    "language": "zh_CN",
     "theme": "dark",
     "window_geometry": None,
     "recent_files": [],
