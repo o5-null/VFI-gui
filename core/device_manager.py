@@ -30,7 +30,7 @@ from typing import Dict, List, Optional, Any
 from loguru import logger
 
 from core.device_type import DeviceType
-from core.benchmark.device_detector import DeviceDetector, DeviceInfo, SystemInfo
+from core.benchmark.device_detector import DeviceDetector, DeviceInfo, SystemInfo, device_detector
 
 
 class DeviceManager:
@@ -51,7 +51,7 @@ class DeviceManager:
     
     def __init__(self):
         """Initialize the device manager."""
-        self._detector = DeviceDetector()
+        self._detector = device_detector
         self._current_device: Optional[DeviceInfo] = None
     
     def get_devices(self, force_refresh: bool = False) -> List[DeviceInfo]:

@@ -46,7 +46,7 @@ class I18NManager(QObject):
     }
     
     # Default language when detection fails
-    DEFAULT_LANGUAGE = "en"
+    DEFAULT_LANGUAGE = "zh_CN"
     
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)

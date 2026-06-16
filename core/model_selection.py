@@ -10,7 +10,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from core.models import ModelManager, ModelTypeInfo, CheckpointInfo, MODEL_DEFINITIONS
+from core.model_manager import ModelManager, ModelTypeInfo, CheckpointInfo, MODEL_DEFINITIONS
 
 
 @dataclass
@@ -76,8 +76,10 @@ class ModelSelectionManager(QObject):
             self._model_manager = model_manager
 
         # Connect to ModelManager signals for real-time updates
-        self._model_manager.models_updated.connect(self._on_model_manager_updated)
-        self._model_manager.engines_updated.connect(self._on_model_manager_updated)
+        # Using Blinker signals instead of Qt signals
+        from core.events import models_updated, engines_updated
+        models_updated.connect(self._on_model_manager_updated, sender=self._model_manager)
+        engines_updated.connect(self._on_model_manager_updated, sender=self._model_manager)
 
         # Flag to prevent recursion during signal handling
         self._handling_model_update = False
@@ -109,7 +111,7 @@ class ModelSelectionManager(QObject):
             version = self._checkpoint_to_version(self._current_type, self._current_checkpoint)
             self._config.set("pipeline.interpolation.model_version", version)
     
-    def _on_model_manager_updated(self):
+    def _on_model_manager_updated(self, sender):
         """Handle ModelManager models_updated or engines_updated signal.
         
         This is called when ModelManager finishes scanning models/engines,
@@ -117,6 +119,9 @@ class ModelSelectionManager(QObject):
         
         Note: ModelManager has already refreshed its data before emitting this signal,
         so we validate selection without calling refresh() to avoid recursion.
+        
+        Args:
+            sender: The sender of the signal (ModelManager instance)
         """
         # Prevent recursion: if we're already handling an update, skip
         if self._handling_model_update:
@@ -327,23 +332,27 @@ class ModelSelectionManager(QObject):
         """Get list of model types with installed models.
         
         Returns:
-            List of ModelTypeInfo for types that have installed checkpoints
+            List of ModelTypeInfo for types that have installed checkpoints,
+            sorted by sort_order (lower = more recommended)
         """
         self._model_manager.refresh()
         result = []
         for mt, info in self._model_manager.get_model_types().items():
             if info.installed_count > 0:
                 result.append(info)
-        return result
+        # Sort by sort_order (lower = displayed first)
+        return sorted(result, key=lambda x: x.sort_order)
     
     def get_all_model_types(self) -> List[ModelTypeInfo]:
         """Get all model types regardless of installation status.
         
         Returns:
-            List of all ModelTypeInfo
+            List of all ModelTypeInfo, sorted by sort_order
         """
         self._model_manager.refresh()
-        return list(self._model_manager.get_model_types().values())
+        all_types = list(self._model_manager.get_model_types().values())
+        # Sort by sort_order (lower = displayed first)
+        return sorted(all_types, key=lambda x: x.sort_order)
     
     def get_available_checkpoints(self, model_type: Optional[str] = None) -> List[CheckpointInfo]:
         """Get available checkpoints for a model type.
