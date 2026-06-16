@@ -29,6 +29,7 @@ from .rife import RIFEModel
 from .film import FILMModel
 from .ifrnet import IFRNetModel
 from .amt import AMTModel
+from .gmfss import GMFSSModel
 
 # 模型注册表
 MODEL_REGISTRY = {
@@ -36,6 +37,7 @@ MODEL_REGISTRY = {
     ModelType.FILM: FILMModel,
     ModelType.IFRNET: IFRNetModel,
     ModelType.AMT: AMTModel,
+    ModelType.GMFSS: GMFSSModel,
 }
 
 
@@ -79,6 +81,7 @@ __all__ = [
     "FILMModel",
     "IFRNetModel",
     "AMTModel",
+    "GMFSSModel",
     # 工厂函数
     "get_model",
     "MODEL_REGISTRY",
