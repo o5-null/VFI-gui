@@ -11,5 +11,5 @@
     "./plugin/vapoursynth-portable/Lib/site-packages"
   ],
   "pythonVersion": "3.12",
-  "pythonPath": "E:/code/VFI/.venv/Scripts/python.exe"
+  "pythonPath": "D:/code/VFI/runtime/xpu/Scripts/python.exe"
 }

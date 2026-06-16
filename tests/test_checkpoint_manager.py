@@ -103,9 +103,15 @@ class TestCheckpointManager:
         self.manager.save(self._make_checkpoint("task_old"))
         checkpoint_path = Path(self.temp_dir) / "checkpoints" / "task_old.json"
 
-        # Manually set its mtime to be very old
-        old_time = (datetime.now() - timedelta(days=30)).timestamp()
-        os.utime(str(checkpoint_path), (old_time, old_time))
+        # cleanup_old checks updated_at from JSON content, not mtime
+        # Overwrite the file with an old timestamp
+        import json as _json
+        with open(checkpoint_path) as _f:
+            data = _json.load(_f)
+        old_ts = (datetime.now() - timedelta(days=30)).isoformat()
+        data["updated_at"] = old_ts
+        with open(checkpoint_path, "w") as _f:
+            _json.dump(data, _f)
 
         # Cleanup with max_age = 1 hour
         deleted = self.manager.cleanup_old(max_age_seconds=3600)

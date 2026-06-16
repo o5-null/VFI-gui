@@ -55,10 +55,12 @@ class TestDuplicateDetector:
         detector = DuplicateDetector(threshold=0.5)
         frame0 = np.zeros((16, 16, 3), dtype=np.uint8)
         frame1 = np.ones((16, 16, 3), dtype=np.uint8) * 255
-        assert detector.is_duplicate(frame0, frame1) is True  # diff=1.0 > 0.5
+        # diff = 1.0 > threshold=0.5 → NOT duplicate
+        assert detector.is_duplicate(frame0, frame1) is False
 
         detector.threshold = 1.5
-        assert detector.is_duplicate(frame0, frame1) is True  # diff=1.0 < 1.5
+        # diff = 1.0 < threshold=1.5 → IS duplicate
+        assert detector.is_duplicate(frame0, frame1) is True
 
     def test_reset(self):
         """reset() does nothing but doesn't error."""
