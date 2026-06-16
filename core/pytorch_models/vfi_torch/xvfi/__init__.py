@@ -341,7 +341,7 @@ class XVFIModel(PyTorchVFIModel):
         
         self._model = self._model.to(self.device)
         self._model.eval()
-        
+        self._is_loaded = True
         self.to_device()
     
     def interpolate(
