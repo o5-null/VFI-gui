@@ -30,13 +30,15 @@
   - `ui/pages/` — ConfigPage + ProcessPage
   - `ui/app.py` — DI 容器
 
-- [x] 模型实现 (6/7 已完成)
+- [x] 模型实现 (8/8 已完成)
   - RIFE (4.0~4.26) — `core/pytorch_models/vfi_torch/rife/`
   - FILM — `core/pytorch_models/vfi_torch/film/`
   - IFRNet — `core/pytorch_models/vfi_torch/ifrnet/`
   - AMT (s/l/g) — `core/pytorch_models/vfi_torch/amt/`
-  - EISAI — `core/pytorch_models/vfi_torch/eisai/`
   - XVFI — `core/pytorch_models/vfi_torch/xvfi/`
+  - GMFSS Fortuna — `core/pytorch_models/vfi_torch/gmfss/`
+  - ATM-VFI — `core/pytorch_models/vfi_torch/atm/` (仅 t=0.5)
+  - MoMo VFI — `core/pytorch_models/vfi_torch/momo/` (仅 t=0.5, DDPM 8-step)
 
 - [x] FILM TorchScript 完整修复 (2026-04-28)
   - 文件: `core/pytorch_models/vfi_torch/film/__init__.py`
@@ -59,14 +61,7 @@
 
 ### 待实现
 
-#### 1. GMFSS Fortuna 模型移植 (高优先级)
-**问题**: 唯一未实现的插帧模型，动画场景专用
 
-**参考**: ComfyUI-Frame-Interpolation 的 vfi_models 实现
-
-**路径**: `core/pytorch_models/vfi_torch/gmfss/`
-
----
 
 #### 2. Tile 处理实现 (中等优先级)
 **问题**: FILM/RIFE 等模型无 tile 处理，4K 视频全帧处理导致 OOM
@@ -245,5 +240,6 @@ UserWarning: 'torch.load' received a zip file that looks like a TorchScript arch
 | 日期 | 变更 |
 |------|------|
 | 2026-06-16 | 合并 `D:\code\VFI\todo.md`，更新文件路径为重构后位置，添加遗漏项 |
+| 2026-06-16 | ATM-VFI + MoMo VFI 模型移植 (84e3b1a)，更新完成状态 |
 | 2026-04-28 | 修复 FILM TorchScript FP16 问题 |
 | 2026-04-21 | 初始代办创建 |
