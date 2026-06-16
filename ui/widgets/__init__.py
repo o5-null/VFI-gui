@@ -1,17 +1,12 @@
-"""VFI-gui widgets module exports."""
+"""VFI-gui widgets package.
 
-from ui.widgets.video_input import VideoInputWidget
-from ui.widgets.pipeline_config import PipelineConfigWidget
-from ui.widgets.progress_panel import ProgressPanel
-from ui.widgets.batch_queue import BatchQueueWidget
-from ui.widgets.model_panel import ModelPanel
-from ui.widgets.benchmark_dialog import BenchmarkDialog
+This package contains reusable PyQt6 UI components:
+- dialogs: Modal dialog components (Settings, Benchmark, About)
+- progress: Progress monitoring widgets (ProgressBar, TaskLog, HwMonitorPlaceholder)
+- queue: Queue management widgets (QueueList, QueueToolbar)
+"""
 
-__all__ = [
-    "VideoInputWidget",
-    "PipelineConfigWidget",
-    "ProgressPanel",
-    "BatchQueueWidget",
-    "ModelPanel",
-    "BenchmarkDialog",
-]
+# Sub-packages are imported via their own __init__.py
+# Users should import from ui.widgets.progress or ui.widgets.queue directly
+
+__all__ = ["dialogs", "progress", "queue"]
