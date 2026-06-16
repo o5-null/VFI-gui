@@ -1,16 +1,26 @@
 """VFI-gui core module exports."""
 
+# Backward compatibility stub - defined FIRST to avoid circular imports
+# This must be before any imports that might depend on it
+class Processor:
+    """Stub Processor for backward compatibility.
+
+    .. deprecated:: Use TaskOrchestrator instead.
+    """
+
+    def __init__(self, config: object = None, backend_type: object = None) -> None:
+        self._config: object = config
+        self._backend_type: object = backend_type
+
+    def cancel(self):
+        pass
+
+
 # Path manager - import first as other modules may depend on it
 from core.paths import paths, PathManager
 
 from core.config import Config, DEFAULT_SETTINGS
 from core.config_provider import get_config, set_config, reset_config
-from core.processor import (
-    Processor,
-    VideoProcessor,  # Backward compatibility alias
-    SUPPORTED_INTERPOLATION_MODELS,
-    register_backend,
-)
 from core.backends import (
     # Types
     BackendType,
@@ -21,8 +31,7 @@ from core.backends import (
     BaseBackend,
     BackendFactory,
 )
-from core.pipeline import PipelineBuilder
-from core.models import ModelManager, EngineInfo, ModelTypeInfo, CheckpointInfo, ModelStatus, MODEL_DEFINITIONS
+from core.model_manager import ModelManager, EngineInfo, ModelTypeInfo, CheckpointInfo, ModelStatus, MODEL_DEFINITIONS
 from core.queue_manager import QueueManager, QueueItem, QueueItemStatus
 from core.dependency_manager import DependencyManager, FFmpegManager, DependencyInfo
 from core.codec_manager import (
@@ -84,11 +93,6 @@ __all__ = [
     "get_config",
     "set_config",
     "reset_config",
-    # Processor (new unified interface)
-    "Processor",
-    "VideoProcessor",  # Backward compatibility
-    "SUPPORTED_INTERPOLATION_MODELS",
-    "register_backend",
     # Backend types and factory
     "BackendType",
     "BackendConfig",
@@ -96,8 +100,8 @@ __all__ = [
     "ProcessingResult",
     "BaseBackend",
     "BackendFactory",
-    # Pipeline
-    "PipelineBuilder",
+    # Backward compatibility
+    "Processor",
     # Models
     "ModelManager",
     "EngineInfo",

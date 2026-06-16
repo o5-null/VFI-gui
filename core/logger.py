@@ -9,7 +9,7 @@ from loguru import logger
 
 def setup_logger(
     log_dir: Optional[str] = None,
-    log_level: str = "INFO",
+    log_level: str = "DEBUG",
     rotation: str = "10 MB",
     retention: str = "7 days",
     enable_console: bool = True,

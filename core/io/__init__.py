@@ -5,7 +5,7 @@ Provides centralized data export/import functionality with support for:
 - Async IO operations
 - Batch processing
 - Data validation and transformation
-- Video frame reading/writing
+- Video frame reading/writing (PyAV primary, OpenCV/PIL fallback)
 """
 
 from core.io.export_import_manager import ExportImportManager, ExportOptions, ExportFormat
@@ -24,16 +24,20 @@ from core.io.frame_data import (
 )
 from core.io.frame_reader import (
     FrameReader,
-    VideoFrameReader,
-    ImageSequenceReader,
+    PyAVVideoReader,
+    PyAVImageReader,
     FrameReaderFactory,
 )
 from core.io.frame_writer import (
     FrameWriter,
-    VideoFrameWriter,
-    ImageSequenceWriter,
+    PyAVVideoWriter,
+    PyAVImageWriter,
     FrameWriterFactory,
 )
+from core.io.streaming_reader import StreamingFramePairReader
+from core.io.frame_cache import FrameCache
+from core.io.ordered_buffer import OrderedResultBuffer
+from core.io.frame_lifecycle import FrameLifecycle
 
 __all__ = [
     # Config/Data IO
@@ -52,14 +56,24 @@ __all__ = [
     "VideoMetadata",
     "VideoFrameSequence",
     "FrameFormat",
-    # Frame Readers
+    # Frame Readers (PyAV primary)
+    "PyAVVideoReader",
+    "PyAVImageReader",
+    # Frame Readers (base)
     "FrameReader",
-    "VideoFrameReader",
-    "ImageSequenceReader",
     "FrameReaderFactory",
-    # Frame Writers
+    # Frame Writers (PyAV primary)
+    "PyAVVideoWriter",
+    "PyAVImageWriter",
+    # Frame Writers (base)
     "FrameWriter",
-    "VideoFrameWriter",
-    "ImageSequenceWriter",
     "FrameWriterFactory",
+    # Streaming Reader
+    "StreamingFramePairReader",
+    # Frame Cache
+    "FrameCache",
+    # Ordered Buffer (parallel results, sequential write)
+    "OrderedResultBuffer",
+    # Frame Lifecycle (write-once, consumer tracking)
+    "FrameLifecycle",
 ]

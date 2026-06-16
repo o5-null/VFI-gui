@@ -17,7 +17,7 @@ Usage:
     models_updated.disconnect(my_callback)
 """
 
-from blinker import Signal, Namespace
+from blinker import Namespace
 
 # Create a namespace for VFI-gui events
 # This prevents signal name collisions with other libraries
@@ -74,7 +74,7 @@ task_progress = events.signal("task-progress")
 
 # Emitted when a task completes successfully
 # Sender: TaskOrchestrator instance
-# Args: task_id (str), output_path (str)
+# Args: task_id (str), output_path (str), error (Optional[str])
 task_finished = events.signal("task-finished")
 
 # Emitted when a task fails
@@ -91,6 +91,26 @@ task_cancelled = events.signal("task-cancelled")
 # Sender: TaskOrchestrator instance
 # Args: state (str) - "idle", "running", "paused", "cancelling", "shutting_down"
 orchestrator_state_changed = events.signal("orchestrator-state-changed")
+
+# Emitted when scheduler state changes (refactored architecture)
+# Sender: Scheduler instance
+# Args: state (str)
+scheduler_state_changed = events.signal("scheduler-state-changed")
+
+
+# ====================
+# Checkpoint Events
+# ====================
+
+# Emitted when a checkpoint is saved
+# Sender: CheckpointManager instance
+# Args: task_id (str), last_completed_frame (int)
+checkpoint_saved = events.signal("checkpoint-saved")
+
+# Emitted when a checkpoint is loaded for resume
+# Sender: CheckpointManager instance
+# Args: task_id (str), last_completed_frame (int)
+checkpoint_loaded = events.signal("checkpoint-loaded")
 
 
 # ====================
@@ -133,6 +153,26 @@ download_finished = events.signal("download-finished")
 devices_changed = events.signal("devices-changed")
 
 
+# ====================
+# Engine Preloader Events
+# ====================
+
+# Emitted when engine preloading starts
+# Sender: EnginePreloader instance
+# Args: total (int) - number of engines to preload
+preloader_started = events.signal("preloader-started")
+
+# Emitted when a single engine finishes preloading (success or failure)
+# Sender: EnginePreloader instance
+# Args: engine_id (str), success (bool)
+preloader_engine_loaded = events.signal("preloader-engine-loaded")
+
+# Emitted when all engine preloading is complete
+# Sender: EnginePreloader instance
+# Args: loaded (int), failed (int)
+preloader_finished = events.signal("preloader-finished")
+
+
 __all__ = [
     "events",
     "engines_updated",
@@ -146,9 +186,16 @@ __all__ = [
     "task_failed",
     "task_cancelled",
     "orchestrator_state_changed",
+    "scheduler_state_changed",
+    "checkpoint_saved",
+    "checkpoint_loaded",
     "queue_changed",
     "queue_item_status_changed",
     "download_progress",
     "download_finished",
     "devices_changed",
+    # Engine Preloader Events
+    "preloader_started",
+    "preloader_engine_loaded",
+    "preloader_finished",
 ]

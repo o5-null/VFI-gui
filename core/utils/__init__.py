@@ -10,7 +10,15 @@ from core.utils.file_utils import (
     get_media_type,
 )
 
+from core.utils.time_utils import (
+    format_time_remaining,
+    format_seconds,
+    calculate_progress_percentage,
+    estimate_completion_time,
+)
+
 __all__ = [
+    # File utilities
     "natural_sort_key",
     "sort_files_naturally",
     "get_image_sequence_files",
@@ -18,4 +26,9 @@ __all__ = [
     "is_image_file",
     "is_video_file",
     "get_media_type",
+    # Time utilities
+    "format_time_remaining",
+    "format_seconds",
+    "calculate_progress_percentage",
+    "estimate_completion_time",
 ]
