@@ -89,7 +89,12 @@ htmlcov/
 .tox/
 .nox/
 
+# Coverage reports
+coverage.xml
+coverage_html/
+
 # Type checking
 .mypy_cache/
 .dmypy.json
 dmypy.json
+pyright.log
