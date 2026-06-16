@@ -2,6 +2,11 @@
 
 This module provides a thread pool for parallel frame interpolation,
 with support for cancellation and graceful shutdown.
+
+InferenceTask wraps InferenceRequest (from core.types) for thread-pool
+execution tracking. TaskResult is the thread-pool-specific result type
+(separate from core.types.TaskResult to avoid coupling the API
+contract to threading concerns).
 """
 
 import threading
@@ -16,6 +21,8 @@ import torch
 import numpy as np
 from loguru import logger
 
+from core.types import InferenceRequest
+
 
 class TaskStatus(Enum):
     """Status of an inference task."""
@@ -28,19 +35,21 @@ class TaskStatus(Enum):
 
 @dataclass
 class InferenceTask:
-    """A single inference task.
-    
+    """Thread-pool execution wrapper around InferenceRequest.
+
+    Wraps the API-level InferenceRequest with execution metadata
+    (task_id, callback, status, result) needed by the thread pool.
+
     Attributes:
         task_id: Unique task identifier
-        frame0: First frame tensor [C, H, W]
-        frame1: Second frame tensor [C, H, W]
-        timestep: Interpolation timestep (0.0 to 1.0)
+        request: InferenceRequest from core.types (frame data + params)
         callback: Optional callback for result
+        status: Current execution status
+        result: Computed result tensor (on completion)
+        error: Error message (on failure)
     """
     task_id: int
-    frame0: torch.Tensor
-    frame1: torch.Tensor
-    timestep: float
+    request: InferenceRequest
     callback: Optional[Callable[[int, torch.Tensor], None]] = None
     status: TaskStatus = TaskStatus.PENDING
     result: Optional[torch.Tensor] = None
@@ -48,9 +57,13 @@ class InferenceTask:
 
 
 @dataclass
-class InferenceResult:
-    """Result of an inference task.
-    
+class TaskResult:
+    """Result of an inference task (thread-pool internal type).
+
+    Separate from core.types.TaskResult — this includes task_id
+    for result ordering and uses 'frame' instead of 'output_frame'
+    since it's execution plumbing, not API contract.
+
     Attributes:
         task_id: Task identifier
         frame: Interpolated frame tensor [C, H, W]
@@ -137,7 +150,7 @@ class InferenceWorker(threading.Thread):
             # Check if cancelled before processing
             if self.cancel_event.is_set():
                 task.status = TaskStatus.CANCELLED
-                self.result_queue.put(InferenceResult(
+                self.result_queue.put(TaskResult(
                     task_id=task.task_id,
                     frame=None,
                     success=False,
@@ -151,15 +164,15 @@ class InferenceWorker(threading.Thread):
             try:
                 with torch.no_grad():
                     result = self._model.interpolate(
-                        task.frame0,
-                        task.frame1,
-                        timestep=task.timestep,
+                        task.request.frame0,
+                        task.request.frame1,
+                        timestep=task.request.timestep,
                     )
                 
                 # Check if cancelled after inference
                 if self.cancel_event.is_set():
                     task.status = TaskStatus.CANCELLED
-                    self.result_queue.put(InferenceResult(
+                    self.result_queue.put(TaskResult(
                         task_id=task.task_id,
                         frame=None,
                         success=False,
@@ -168,7 +181,7 @@ class InferenceWorker(threading.Thread):
                 else:
                     task.status = TaskStatus.COMPLETED
                     task.result = result.frame
-                    self.result_queue.put(InferenceResult(
+                    self.result_queue.put(TaskResult(
                         task_id=task.task_id,
                         frame=result.frame,
                         success=True
@@ -185,7 +198,7 @@ class InferenceWorker(threading.Thread):
                 logger.error(f"Worker {self.worker_id}: Inference error: {e}")
                 task.status = TaskStatus.FAILED
                 task.error = str(e)
-                self.result_queue.put(InferenceResult(
+                self.result_queue.put(TaskResult(
                     task_id=task.task_id,
                     frame=None,
                     success=False,
@@ -287,7 +300,7 @@ class InferenceThreadPool:
         self.queue_size = queue_size
         
         self.task_queue: queue.Queue[Optional[InferenceTask]] = queue.Queue(maxsize=queue_size)
-        self.result_queue: queue.Queue[InferenceResult] = queue.Queue()
+        self.result_queue: queue.Queue[TaskResult] = queue.Queue()
         self.cancel_event = threading.Event()
         
         self.workers: List[InferenceWorker] = []
@@ -369,9 +382,12 @@ class InferenceThreadPool:
                 
                 task = InferenceTask(
                     task_id=task_id,
-                    frame0=frames[i],
-                    frame1=frames[i + 1],
-                    timestep=timestep,
+                    request=InferenceRequest(
+                        frame0=frames[i],
+                        frame1=frames[i + 1],
+                        timestep=timestep,
+                        model_config={},
+                    ),
                 )
                 
                 if self.submit(task):
@@ -382,14 +398,14 @@ class InferenceThreadPool:
         
         return task_ids
     
-    def get_result(self, timeout: Optional[float] = None) -> Optional[InferenceResult]:
+    def get_result(self, timeout: Optional[float] = None) -> Optional[TaskResult]:
         """Get a result from the result queue.
         
         Args:
             timeout: Timeout in seconds (None = block indefinitely)
             
         Returns:
-            InferenceResult or None if timeout
+            TaskResult or None if timeout
         """
         try:
             return self.result_queue.get(timeout=timeout)
@@ -400,7 +416,7 @@ class InferenceThreadPool:
         self,
         expected_count: Optional[int] = None,
         timeout: Optional[float] = None,
-    ) -> List[InferenceResult]:
+    ) -> List[TaskResult]:
         """Get all results from the result queue.
         
         Args:
@@ -459,7 +475,7 @@ class InferenceThreadPool:
             try:
                 task = self.task_queue.get_nowait()
                 if task:
-                    self.result_queue.put(InferenceResult(
+                    self.result_queue.put(TaskResult(
                         task_id=task.task_id,
                         frame=None,
                         success=False,
