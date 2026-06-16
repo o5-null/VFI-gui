@@ -30,6 +30,8 @@ from .film import FILMModel
 from .ifrnet import IFRNetModel
 from .amt import AMTModel
 from .gmfss import GMFSSModel
+from .xvfi import XVFIModel
+from .eisai import EISAIModel
 
 # 模型注册表
 MODEL_REGISTRY = {
@@ -38,12 +40,15 @@ MODEL_REGISTRY = {
     ModelType.IFRNET: IFRNetModel,
     ModelType.AMT: AMTModel,
     ModelType.GMFSS: GMFSSModel,
+    ModelType.XVFI: XVFIModel,
+    ModelType.EISAI: EISAIModel,
 }
 
 
 def get_model(model_type: ModelType, config: Optional[VFIConfig] = None) -> PyTorchVFIModel:
     """
     根据类型获取模型实例。
+    委托给 base.get_model 以确保单一注册来源。
     
     Args:
         model_type: 插值模型类型
@@ -52,11 +57,10 @@ def get_model(model_type: ModelType, config: Optional[VFIConfig] = None) -> PyTo
     Returns:
         模型实例
     """
-    if model_type not in MODEL_REGISTRY:
-        raise ValueError(f"未知模型类型: {model_type}。可用类型: {list(MODEL_REGISTRY.keys())}")
-    
-    model_class = MODEL_REGISTRY[model_type]
-    return model_class(config)
+    from .base import get_model as _base_get_model
+    if config is None:
+        config = VFIConfig(model_type=model_type)
+    return _base_get_model(config)
 
 
 __all__ = [

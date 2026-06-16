@@ -307,6 +307,7 @@ def get_model(config: VFIConfig) -> PyTorchVFIModel:
     from .amt import AMTModel
     from .xvfi import XVFIModel
     from .eisai import EISAIModel
+    from .gmfss import GMFSSModel
     
     model_classes = {
         ModelType.RIFE: RIFEModel,
@@ -315,6 +316,7 @@ def get_model(config: VFIConfig) -> PyTorchVFIModel:
         ModelType.AMT: AMTModel,
         ModelType.XVFI: XVFIModel,
         ModelType.EISAI: EISAIModel,
+        ModelType.GMFSS: GMFSSModel,
     }
     
     if config.model_type not in model_classes:

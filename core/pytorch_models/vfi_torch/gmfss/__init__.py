@@ -77,7 +77,14 @@ class GMFSSModel(PyTorchVFIModel):
 
     def __init__(self, config: VFIConfig):
         super().__init__(config)
-        self._variant = config.model_version if config.model_version in ("fortuna", "fortuna_union") else "fortuna_union"
+        # Map short variant names to GMFSS_CKPTS keys
+        version = config.model_version
+        if version in ("fortuna_union", "GMFSS_fortuna_union", "gmfss"):
+            self._variant = "GMFSS_fortuna_union"
+        elif version in ("fortuna", "GMFSS_fortuna"):
+            self._variant = "GMFSS_fortuna"
+        else:
+            self._variant = "GMFSS_fortuna_union"
         self._model_dict: dict = {}  # component_name -> nn.Module
 
     # ====================
