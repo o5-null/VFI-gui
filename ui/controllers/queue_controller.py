@@ -1,195 +1,101 @@
-"""Queue Controller for VFI-gui.
+"""QueueController - stateless proxy for queue operations.
 
-Handles batch queue operations, separating queue logic from MainWindow.
+Provides action methods for queue management without holding state.
+All state is managed by QueueManager and exposed via QueueViewModel.
 """
 
-from typing import Optional, List, Callable
-from pathlib import Path
+from typing import Any, Dict
 
-from PyQt6.QtCore import QObject, pyqtSignal
 from loguru import logger
 
-from core.queue_manager import QueueManager, QueueItem, QueueItemStatus
-from ui.viewmodels.queue_viewmodel import QueueViewModel
+from core.queue_manager import QueueManager
 
 
-class QueueController(QObject):
-    """Controller for batch queue management.
+class QueueController:
+    """Stateless controller for queue operations.
     
-    Encapsulates queue logic that was previously in MainWindow,
-    providing a clean interface for managing batch processing.
+    This controller provides action methods for queue management:
+    - Add items to queue
+    - Remove items from queue
+    - Clear queue
+    
+    Controllers do NOT hold state - they delegate to QueueManager.
     """
     
-    # Signals forwarded from ViewModel
-    item_added = pyqtSignal(str)  # item_id
-    item_removed = pyqtSignal(str)  # item_id
-    item_status_changed = pyqtSignal(str, str)  # item_id, new_status
-    queue_cleared = pyqtSignal()
-    queue_started = pyqtSignal()
-    queue_finished = pyqtSignal()
-    progress_updated = pyqtSignal(int, int)  # completed, total
-    
-    def __init__(self, queue_manager: Optional[QueueManager] = None, parent=None):
-        super().__init__(parent)
-        self._viewmodel = QueueViewModel(queue_manager, self)
-        self._setup_connections()
-        
-        # Processing callback
-        self._process_item_callback: Optional[Callable[[str, str], bool]] = None
-    
-    def _setup_connections(self):
-        """Connect ViewModel signals to controller signals."""
-        self._viewmodel.item_added.connect(self.item_added)
-        self._viewmodel.item_removed.connect(self.item_removed)
-        self._viewmodel.item_status_changed.connect(self.item_status_changed)
-        self._viewmodel.queue_cleared.connect(self.queue_cleared)
-        self._viewmodel.queue_started.connect(self.queue_started)
-        self._viewmodel.queue_finished.connect(self.queue_finished)
-    
-    def set_process_callback(self, callback: Callable[[str, str], bool]) -> None:
-        """Set callback for processing individual items.
+    def __init__(self, queue_manager: QueueManager):
+        """Initialize QueueController.
         
         Args:
-            callback: Function that takes (video_path, output_path) and returns success
+            queue_manager: QueueManager instance
         """
-        self._process_item_callback = callback
+        self._queue_manager = queue_manager
     
-    def add_video(self, video_path: str, output_path: Optional[str] = None) -> str:
-        """Add a video to the queue.
+    def add_to_queue(self, video_path: str, pipeline_config: Dict[str, Any]) -> int:
+        """Add a video to the processing queue.
         
         Args:
             video_path: Path to input video
-            output_path: Optional output path (auto-generated if None)
+            pipeline_config: Pipeline configuration dict
             
         Returns:
-            Item ID
+            Queue item index
         """
-        if not Path(video_path).exists():
-            logger.error(f"Video file not found: {video_path}")
-            raise FileNotFoundError(f"Video file not found: {video_path}")
-        
-        # Auto-generate output path if not provided
-        if output_path is None:
-            video_path_obj = Path(video_path)
-            output_path = str(
-                video_path_obj.parent / f"{video_path_obj.stem}_interpolated{video_path_obj.suffix}"
-            )
-        
-        item_id = self._viewmodel.add_item(
-            video_path=video_path,
-            output_path=output_path,
-        )
-        
-        logger.info(f"Added to queue: {video_path} -> {output_path}")
-        return item_id
+        logger.info(f"Adding to queue: {video_path}")
+        index = self._queue_manager.add_item(video_path, pipeline_config)
+        return index
     
-    def add_videos_from_folder(self, folder_path: str) -> List[str]:
-        """Add all videos from a folder to the queue.
+    def remove_item(self, index: int) -> bool:
+        """Remove an item from the queue.
         
         Args:
-            folder_path: Path to folder containing videos
+            index: Item index
             
         Returns:
-            List of added item IDs
+            True if removed, False if invalid index
         """
-        folder = Path(folder_path)
-        if not folder.exists():
-            logger.error(f"Folder not found: {folder_path}")
-            raise FileNotFoundError(f"Folder not found: {folder_path}")
-        
-        # Supported video extensions
-        video_extensions = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v"}
-        
-        item_ids = []
-        for video_file in folder.iterdir():
-            if video_file.suffix.lower() in video_extensions:
-                try:
-                    item_id = self.add_video(str(video_file))
-                    item_ids.append(item_id)
-                except Exception as e:
-                    logger.warning(f"Failed to add {video_file}: {e}")
-        
-        logger.info(f"Added {len(item_ids)} videos from {folder_path}")
-        return item_ids
-    
-    def remove_item(self, item_id: str) -> bool:
-        """Remove an item from the queue."""
-        success = self._viewmodel.remove_item(item_id)
-        if success:
-            logger.info(f"Removed from queue: {item_id}")
-        return success
+        logger.info(f"Removing queue item: {index}")
+        return self._queue_manager.remove_item(index)
     
     def clear_queue(self) -> None:
         """Clear all items from the queue."""
-        self._viewmodel.clear_queue()
-        logger.info("Queue cleared")
+        logger.info("Clearing queue")
+        self._queue_manager.clear()
     
-    def get_items(self) -> List[QueueItem]:
-        """Get all queue items."""
-        return self._viewmodel.get_items()
+    def clear_completed(self) -> None:
+        """Remove all completed items from queue."""
+        logger.info("Clearing completed items")
+        self._queue_manager.clear_completed()
     
-    def get_stats(self) -> dict:
-        """Get queue statistics."""
-        return self._viewmodel.get_stats()
+    def clear_failed(self) -> None:
+        """Remove all failed items from queue."""
+        logger.info("Clearing failed items")
+        self._queue_manager.clear_failed()
     
-    def is_empty(self) -> bool:
-        """Check if queue is empty."""
-        return self._viewmodel.is_empty()
+    def retry_failed(self) -> None:
+        """Reset all failed items to pending."""
+        logger.info("Retrying failed items")
+        self._queue_manager.retry_failed()
+    
+    def move_item(self, from_index: int, to_index: int) -> bool:
+        """Move an item to a new position.
+        
+        Args:
+            from_index: Current item index
+            to_index: New position
+            
+        Returns:
+            True if moved, False if invalid indices
+        """
+        logger.info(f"Moving queue item from {from_index} to {to_index}")
+        return self._queue_manager.move_item(from_index, to_index)
     
     def get_count(self) -> int:
-        """Get total number of items."""
-        return self._viewmodel.get_count()
+        """Get total items count."""
+        return self._queue_manager.get_count()
     
-    def start_queue(self) -> bool:
-        """Start processing the queue.
-        
-        Returns:
-            True if queue was started
-        """
-        if self._viewmodel.is_running():
-            logger.warning("Queue is already running")
-            return False
-        
-        if self._viewmodel.is_empty():
-            logger.warning("Cannot start empty queue")
-            return False
-        
-        logger.info("Starting queue processing")
-        return self._viewmodel.start_queue()
-    
-    def stop_queue(self) -> None:
-        """Stop queue processing."""
-        self._viewmodel.stop_queue()
-        logger.info("Queue processing stopped")
-    
-    def is_running(self) -> bool:
-        """Check if queue is running."""
-        return self._viewmodel.is_running()
-    
-    def move_item_up(self, item_id: str) -> bool:
-        """Move an item up in the queue."""
-        return self._viewmodel.move_item_up(item_id)
-    
-    def move_item_down(self, item_id: str) -> bool:
-        """Move an item down in the queue."""
-        return self._viewmodel.move_item_down(item_id)
-    
-    def get_status_text(self) -> str:
-        """Get formatted status text for display."""
-        stats = self.get_stats()
-        total = sum(stats.values())
-        
-        if total == 0:
-            return "Queue is empty"
-        
-        parts = []
-        if stats.get("pending", 0) > 0:
-            parts.append(f"{stats['pending']} pending")
-        if stats.get("processing", 0) > 0:
-            parts.append(f"{stats['processing']} processing")
-        if stats.get("completed", 0) > 0:
-            parts.append(f"{stats['completed']} completed")
-        if stats.get("failed", 0) > 0:
-            parts.append(f"{stats['failed']} failed")
-        
-        return ", ".join(parts) if parts else f"{total} items"
+    def get_pending_count(self) -> int:
+        """Get pending items count."""
+        return self._queue_manager.get_pending_count()
+
+
+__all__ = ["QueueController"]

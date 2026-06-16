@@ -1,127 +1,242 @@
-"""Codec ViewModel for VFI-gui.
+"""CodecViewModel for output codec configuration.
 
-Acts as intermediary between CodecSettingsWidget and CodecManager,
-providing a clean interface for UI-codec operations.
+Wraps OutputConfig and CodecManager to provide Qt-signals for UI binding.
+Supports explicit persist() for configuration saving.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List
+
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from core.codec_manager import CodecManager, CodecConfig, CodecType
+from core.config.config_facade import ConfigFacade
+from core.codec_manager import get_codec_manager, CodecInfo
 
 
 class CodecViewModel(QObject):
-    """ViewModel for codec configuration management.
+    """ViewModel for codec/output configuration.
     
-    Decouples UI widgets from CodecManager implementation details.
+    Signals:
+        codec_changed: Emitted when codec selection changes
+        quality_changed: Emitted when quality value changes (int)
+        preset_changed: Emitted when preset selection changes
+        audio_copy_changed: Emitted when audio copy mode changes (bool)
+        available_codecs_changed: Emitted when available codecs list changes
+    
+    Properties:
+        codec: Current codec ID string
+        quality: Current quality value (int)
+        preset: Current preset string
+        audio_copy: Whether to copy audio stream
+        available_codecs: List of available codec IDs
+    
+    Methods:
+        persist(): Save configuration to ConfigFacade
+        to_config(): Export as ProcessingConfig.output compatible dict
     """
     
-    # Signals for UI updates
-    codec_changed = pyqtSignal(str)  # codec name
-    config_changed = pyqtSignal()  # any config change
-    quality_changed = pyqtSignal(int)  # quality value
-    preset_changed = pyqtSignal(str)  # preset name
+    # Signals
+    codec_changed = pyqtSignal(str)
+    quality_changed = pyqtSignal(int)
+    preset_changed = pyqtSignal(str)
+    audio_copy_changed = pyqtSignal(bool)
+    available_codecs_changed = pyqtSignal(list)
     
-    def __init__(self, codec_manager: Optional[CodecManager] = None, parent=None):
-        super().__init__(parent)
-        self._codec_manager = codec_manager or CodecManager()
-        self._current_config = CodecConfig()
-        self._current_codec = "hevc_nvenc"
-    
-    def get_available_codecs(self) -> List[str]:
-        """Get list of available codec names."""
-        return self._codec_manager.get_available_codecs()
-    
-    def get_codec_info(self, codec_name: str) -> Optional[Dict[str, Any]]:
-        """Get information about a specific codec."""
-        return self._codec_manager.get_codec_info(codec_name)
-    
-    def get_current_codec(self) -> str:
-        """Get currently selected codec."""
-        return self._current_codec
-    
-    def set_codec(self, codec_name: str) -> bool:
-        """Set the current codec.
+    def __init__(
+        self,
+        config: ConfigFacade,
+        codec_manager=None,
+        parent=None,
+    ):
+        """Initialize CodecViewModel.
         
         Args:
-            codec_name: Name of the codec to select
-            
-        Returns:
-            True if codec was changed, False if invalid
+            config: ConfigFacade instance for persistence
+            codec_manager: CodecManager instance (optional, uses global if None)
+            parent: Parent QObject
         """
-        if codec_name not in self.get_available_codecs():
-            return False
+        super().__init__(parent)
+        self._config = config
+        self._codec_manager = codec_manager or get_codec_manager()
         
-        self._current_codec = codec_name
-        self._current_config.codec = codec_name
-        self.codec_changed.emit(codec_name)
-        self.config_changed.emit()
-        return True
+        # Private fields (loaded from config)
+        self._codec: str = ""
+        self._quality: int = 0
+        self._preset: str = ""
+        self._audio_copy: bool = True
+        self._available_codecs: List[str] = []
+        
+        # Load initial state from config
+        self._load_from_config()
     
-    def get_quality_range(self) -> tuple:
-        """Get valid quality range for current codec."""
-        info = self.get_codec_info(self._current_codec)
-        if info:
-            return (info.get("min_quality", 0), info.get("max_quality", 51))
-        return (0, 51)
+    def _load_from_config(self) -> None:
+        """Load configuration values from ConfigFacade."""
+        output_config = self._config.output
+        
+        self._codec = output_config.get_codec()
+        self._quality = output_config.get_quality()
+        self._preset = output_config.get_preset()
+        self._audio_copy = output_config.is_audio_copy_enabled()
+        
+        # Get available codecs from CodecManager
+        all_codecs = self._codec_manager.get_all_codecs()
+        self._available_codecs = list(all_codecs.keys())
     
-    def get_quality(self) -> int:
-        """Get current quality setting."""
-        return self._current_config.quality
+    # ====================
+    # Properties
+    # ====================
+    
+    @property
+    def codec(self) -> str:
+        """Get current codec ID."""
+        return self._codec
+    
+    @property
+    def quality(self) -> int:
+        """Get current quality value."""
+        return self._quality
+    
+    @property
+    def preset(self) -> str:
+        """Get current preset."""
+        return self._preset
+    
+    @property
+    def audio_copy(self) -> bool:
+        """Get audio copy mode."""
+        return self._audio_copy
+    
+    @property
+    def available_codecs(self) -> List[str]:
+        """Get list of available codec IDs."""
+        return self._available_codecs.copy()
+    
+    # ====================
+    # Setters (emit signals, no auto-persist)
+    # ====================
+    
+    def set_codec(self, codec: str) -> None:
+        """Set codec selection.
+        
+        Args:
+            codec: Codec ID string
+        """
+        if codec != self._codec:
+            self._codec = codec
+            self.codec_changed.emit(codec)
+            
+            # Update preset to default for new codec
+            codec_info = self._codec_manager.get_codec_info(codec)
+            if codec_info and codec_info.default_preset:
+                self._preset = codec_info.default_preset
+                self.preset_changed.emit(self._preset)
     
     def set_quality(self, quality: int) -> None:
-        """Set quality value."""
-        min_q, max_q = self.get_quality_range()
-        self._current_config.quality = max(min_q, min(max_q, quality))
-        self.quality_changed.emit(self._current_config.quality)
-        self.config_changed.emit()
-    
-    def get_available_presets(self) -> List[str]:
-        """Get available presets for current codec."""
-        info = self.get_codec_info(self._current_codec)
-        if info:
-            return info.get("presets", [])
-        return []
-    
-    def get_preset(self) -> str:
-        """Get current preset."""
-        return self._current_config.preset
+        """Set quality value.
+        
+        Args:
+            quality: Quality integer value
+        """
+        if quality != self._quality:
+            self._quality = quality
+            self.quality_changed.emit(quality)
     
     def set_preset(self, preset: str) -> None:
-        """Set preset value."""
-        self._current_config.preset = preset
-        self.preset_changed.emit(preset)
-        self.config_changed.emit()
+        """Set preset selection.
+        
+        Args:
+            preset: Preset string
+        """
+        if preset != self._preset:
+            self._preset = preset
+            self.preset_changed.emit(preset)
     
-    def get_config(self) -> CodecConfig:
-        """Get current codec configuration."""
-        return self._current_config
+    def set_audio_copy(self, enabled: bool) -> None:
+        """Set audio copy mode.
+        
+        Args:
+            enabled: True to copy audio stream
+        """
+        if enabled != self._audio_copy:
+            self._audio_copy = enabled
+            self.audio_copy_changed.emit(enabled)
     
-    def set_config(self, config: CodecConfig) -> None:
-        """Set codec configuration from external source."""
-        self._current_config = config
-        self._current_codec = config.codec
-        self.codec_changed.emit(config.codec)
-        self.config_changed.emit()
+    # ====================
+    # Persistence
+    # ====================
     
-    def get_ffmpeg_args(self) -> List[str]:
-        """Get FFmpeg arguments for current configuration."""
-        return self._codec_manager.build_ffmpeg_args(self._current_config)
+    def persist(self) -> None:
+        """Save configuration to ConfigFacade."""
+        output_config = self._config.output
+        
+        output_config.set_codec(self._codec)
+        output_config.set_quality(self._quality)
+        output_config.set_preset(self._preset)
+        output_config.set_audio_copy(self._audio_copy)
     
-    def validate_config(self) -> tuple[bool, str]:
-        """Validate current configuration.
+    def to_config(self) -> Dict[str, Any]:
+        """Export as ProcessingConfig.output compatible dict.
         
         Returns:
-            Tuple of (is_valid, error_message)
+            Dictionary with codec configuration for ProcessingConfig
         """
-        return self._codec_manager.validate_config(self._current_config)
+        return {
+            "codec": self._codec,
+            "quality": self._quality,
+            "preset": self._preset,
+            "audio_copy": self._audio_copy,
+        }
     
-    def load_from_dict(self, settings: Dict[str, Any]) -> None:
-        """Load configuration from settings dictionary."""
-        self._current_config = CodecConfig.from_dict(settings)
-        self._current_codec = self._current_config.codec
-        self.config_changed.emit()
+    # ====================
+    # Utility Methods
+    # ====================
     
-    def save_to_dict(self) -> Dict[str, Any]:
-        """Save configuration to dictionary."""
-        return self._current_config.to_dict()
+    def get_codec_info(self, codec_id: str) -> Dict[str, Any]:
+        """Get codec information for display.
+        
+        Args:
+            codec_id: Codec ID to query
+            
+        Returns:
+            Dictionary with codec info (name, description, presets, etc.)
+        """
+        info = self._codec_manager.get_codec_info(codec_id)
+        if info:
+            return {
+                "id": info.id,
+                "name": info.name,
+                "description": info.description,
+                "type": info.type.value,
+                "vendor": info.vendor.value,
+                "presets": info.presets,
+                "preset_names": info.preset_names,
+                "default_preset": info.default_preset,
+                "quality_range": info.quality_range,
+                "quality_default": info.quality_default,
+            }
+        return {}
+    
+    def get_preset_display_name(self, preset: str) -> str:
+        """Get display name for a preset.
+        
+        Args:
+            preset: Preset string
+            
+        Returns:
+            Human-readable preset name
+        """
+        codec_info = self._codec_manager.get_codec_info(self._codec)
+        if codec_info and preset in codec_info.preset_names:
+            return codec_info.preset_names[preset]
+        return preset
+    
+    def refresh_available_codecs(self) -> None:
+        """Refresh available codecs list from CodecManager."""
+        all_codecs = self._codec_manager.get_all_codecs()
+        new_list = list(all_codecs.keys())
+        
+        if new_list != self._available_codecs:
+            self._available_codecs = new_list
+            self.available_codecs_changed.emit(new_list)
+
+
+__all__ = ["CodecViewModel"]

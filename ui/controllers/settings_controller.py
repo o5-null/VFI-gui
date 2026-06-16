@@ -1,203 +1,162 @@
-"""Settings Controller for VFI-gui.
+"""SettingsController - handles UI settings persistence.
 
-Handles settings management operations, separating settings logic from MainWindow.
+Stateless controller for window geometry and UI preferences.
 """
 
-from typing import Optional, Dict, Any, Callable
-from pathlib import Path
+from typing import Optional
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QWidget
 from loguru import logger
 
-from core import Config
-from core.i18n import I18NManager, get_i18n
+from core.config.config_facade import ConfigFacade
 
 
-class SettingsController(QObject):
-    """Controller for application settings management.
+class SettingsController:
+    """Stateless controller for UI settings.
     
-    Encapsulates settings logic that was previously in MainWindow,
-    providing a clean interface for loading, saving, and applying settings.
+    This controller handles:
+    - Window geometry persistence
+    - UI preferences (language, theme)
+    
+    Controllers do NOT hold state - they delegate to ConfigFacade.
     """
     
-    # Signals
-    settings_loaded = pyqtSignal()
-    settings_saved = pyqtSignal()
-    language_changed = pyqtSignal(str)  # new language code
-    config_changed = pyqtSignal(str, Any)  # key, value
-    
-    def __init__(self, config: Optional[Config] = None, parent=None):
-        super().__init__(parent)
-        self._config = config or Config()
-        self._i18n = get_i18n()
-    
-    def get_config(self) -> Config:
-        """Get the configuration object."""
-        return self._config
-    
-    def load_settings(self) -> None:
-        """Load settings from file."""
-        self._config.load()
-        logger.info("Settings loaded")
-        self.settings_loaded.emit()
-    
-    def save_settings(self) -> bool:
-        """Save settings to file.
-        
-        Returns:
-            True if saved successfully
-        """
-        try:
-            self._config.save()
-            logger.info("Settings saved")
-            self.settings_saved.emit()
-            return True
-        except Exception as e:
-            logger.error(f"Failed to save settings: {e}")
-            return False
-    
-    def get_setting(self, key: str, default: Any = None) -> Any:
-        """Get a setting value by key.
+    def __init__(self, config: ConfigFacade):
+        """Initialize SettingsController.
         
         Args:
-            key: Dot-notation key (e.g., "pipeline.interpolation.model_type")
-            default: Default value if key not found
-            
-        Returns:
-            Setting value or default
+            config: ConfigFacade instance
         """
-        return self._config.get(key, default)
+        self._config = config
     
-    def set_setting(self, key: str, value: Any) -> None:
-        """Set a setting value.
+    def save_window_geometry(self, geometry: bytes) -> None:
+        """Save window geometry to config.
         
         Args:
-            key: Dot-notation key
-            value: Value to set
+            geometry: Serialized window geometry (from QWidget.saveGeometry())
         """
-        self._config.set(key, value)
-        self.config_changed.emit(key, value)
-        logger.debug(f"Setting changed: {key} = {value}")
+        # Store as hex string for JSON compatibility
+        geometry_hex = geometry.hex()
+        self._config.ui.set("window_geometry", geometry_hex)
+        logger.debug("Window geometry saved")
     
-    def get_language(self) -> str:
-        """Get current language code."""
-        return self._config.get("ui.language", "")
-    
-    def set_language(self, language_code: str) -> bool:
-        """Set application language.
-        
-        Args:
-            language_code: Language code (e.g., "en", "zh_CN")
-            
-        Returns:
-            True if language was changed
-        """
-        current = self.get_language()
-        if current == language_code:
-            return False
-        
-        self._config.set("ui.language", language_code)
-        
-        # Apply language change
-        if self._i18n:
-            self._i18n.set_language(language_code)
-        
-        logger.info(f"Language changed to: {language_code}")
-        self.language_changed.emit(language_code)
-        self.config_changed.emit("ui.language", language_code)
-        return True
-    
-    def get_available_languages(self) -> Dict[str, str]:
-        """Get available languages.
+    def load_window_geometry(self) -> Optional[bytes]:
+        """Load window geometry from config.
         
         Returns:
-            Dictionary of language_code -> display_name
+            Geometry bytes or None if not stored
         """
-        if self._i18n:
-            languages = {}
-            for code in self._i18n.get_available_languages():
-                display = self._i18n.get_language_display_name(code)
-                languages[code] = display
-            return languages
-        return {}
-    
-    def get_window_geometry(self) -> Optional[bytes]:
-        """Get saved window geometry."""
-        geometry = self._config.get("window.geometry")
-        if geometry:
+        geometry_hex = self._config.ui.get("window_geometry")
+        
+        if geometry_hex:
             try:
-                return bytes.fromhex(geometry)
+                geometry = bytes.fromhex(geometry_hex)
+                logger.debug("Window geometry loaded")
+                return geometry
             except ValueError:
-                logger.warning("Invalid window geometry in settings")
+                logger.warning("Invalid geometry data in config")
+                return None
+        
         return None
     
-    def set_window_geometry(self, geometry: bytes) -> None:
-        """Save window geometry."""
-        self._config.set("window.geometry", geometry.hex())
-    
-    def get_models_dir(self) -> str:
-        """Get models directory path."""
-        return self._config.get("paths.models_dir", "")
-    
-    def set_models_dir(self, path: str) -> None:
-        """Set models directory path."""
-        self._config.set("paths.models_dir", path)
-    
-    def get_output_dir(self) -> str:
-        """Get output directory path."""
-        return self._config.get("paths.output_dir", "")
-    
-    def set_output_dir(self, path: str) -> None:
-        """Set output directory path."""
-        self._config.set("paths.output_dir", path)
-    
-    def apply_language_preference(self) -> None:
-        """Apply saved language preference."""
-        language = self.get_language()
-        if language and self._i18n:
-            self._i18n.set_language(language)
-            logger.info(f"Applied language preference: {language}")
-
-    def get_proxy_config(self) -> Dict[str, str]:
-        """Get proxy configuration.
-        
-        Returns:
-            Dictionary with http_proxy, https_proxy, no_proxy
-        """
-        return self._config.get("network.proxy", {
-            "http_proxy": "",
-            "https_proxy": "",
-            "no_proxy": "",
-        })
-
-    def set_proxy_config(self, http_proxy: str = "", https_proxy: str = "", no_proxy: str = "") -> None:
-        """Set proxy configuration.
+    def save_window_state(self, state: bytes) -> None:
+        """Save window state (toolbars, docks) to config.
         
         Args:
-            http_proxy: HTTP proxy URL (e.g., "http://127.0.0.1:7890")
-            https_proxy: HTTPS proxy URL (e.g., "http://127.0.0.1:7890")
-            no_proxy: Comma-separated list of hosts to bypass proxy
+            state: Serialized window state (from QMainWindow.saveState())
         """
-        self._config.set("network.proxy", {
-            "http_proxy": http_proxy,
-            "https_proxy": https_proxy,
-            "no_proxy": no_proxy,
-        })
-        logger.info(f"Proxy configuration updated")
+        state_hex = state.hex()
+        self._config.ui.set("window_state", state_hex)
+        logger.debug("Window state saved")
+    
+    def load_window_state(self) -> Optional[bytes]:
+        """Load window state from config.
+        
+        Returns:
+            State bytes or None if not stored
+        """
+        state_hex = self._config.ui.get("window_state")
+        
+        if state_hex:
+            try:
+                state = bytes.fromhex(state_hex)
+                logger.debug("Window state loaded")
+                return state
+            except ValueError:
+                logger.warning("Invalid state data in config")
+                return None
+        
+        return None
+    
+    def set_language(self, language: str) -> None:
+        """Set UI language.
+        
+        Args:
+            language: Language code (e.g., "en", "zh_CN")
+        """
+        self._config.set_language(language)
+        logger.info(f"Language set to: {language}")
+    
+    def get_language(self) -> str:
+        """Get current UI language.
+        
+        Returns:
+            Language code
+        """
+        return self._config.get_language()
+    
+    def set_theme(self, theme: str) -> None:
+        """Set UI theme.
+        
+        Args:
+            theme: Theme name (e.g., "dark", "light")
+        """
+        self._config.ui.set("theme", theme)
+        logger.info(f"Theme set to: {theme}")
+    
+    def get_theme(self) -> str:
+        """Get current UI theme.
+        
+        Returns:
+            Theme name
+        """
+        return self._config.ui.get("theme", "dark")
+    
+    def set_last_open_dir(self, directory: str) -> None:
+        """Save last opened directory for file dialogs.
+        
+        Args:
+            directory: Directory path
+        """
+        self._config.ui.set("last_open_dir", directory)
+    
+    def get_last_open_dir(self) -> str:
+        """Get last opened directory.
+        
+        Returns:
+            Directory path or empty string
+        """
+        return self._config.ui.get("last_open_dir", "")
+    
+    def set_last_save_dir(self, directory: str) -> None:
+        """Save last save directory for file dialogs.
+        
+        Args:
+            directory: Directory path
+        """
+        self._config.ui.set("last_save_dir", directory)
+    
+    def get_last_save_dir(self) -> str:
+        """Get last save directory.
+        
+        Returns:
+            Directory path or empty string
+        """
+        return self._config.ui.get("last_save_dir", "")
+    
+    def reset_ui_settings(self) -> None:
+        """Reset UI settings to defaults."""
+        self._config.ui.reset_to_defaults()
+        logger.info("UI settings reset to defaults")
 
-    def get_network_timeout(self) -> int:
-        """Get network timeout in seconds."""
-        return self._config.get("network.timeout", 300)
 
-    def set_network_timeout(self, timeout: int) -> None:
-        """Set network timeout in seconds."""
-        self._config.set("network.timeout", timeout)
-
-    def get_max_retries(self) -> int:
-        """Get max retry attempts for failed downloads."""
-        return self._config.get("network.max_retries", 3)
-
-    def set_max_retries(self, retries: int) -> None:
-        """Set max retry attempts for failed downloads."""
-        self._config.set("network.max_retries", retries)
+__all__ = ["SettingsController"]
