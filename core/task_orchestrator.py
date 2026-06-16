@@ -23,18 +23,19 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from threading import Thread
 from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
 
-import numpy as np
 from loguru import logger
+
+from core.task_parser import TaskParser
+from core.types import TaskDescriptor, TaskCheckpoint, TaskState
+from core.checkpoint_manager import CheckpointManager
 
 if TYPE_CHECKING:
     from core.config.config_facade import ConfigFacade
-    from core.backends import BackendConfig, ProcessingConfig, BaseBackend
+    from core.backends.base_backend import BaseBackend
     from core.io.frame_writer import FrameWriter
-    from core.io.frame_data import VideoMetadata
 
 
 class OrchestratorState(Enum):
@@ -44,16 +45,6 @@ class OrchestratorState(Enum):
     PAUSED = "paused"
     CANCELLING = "cancelling"
     SHUTTING_DOWN = "shutting_down"
-
-
-class TaskState(Enum):
-    """Individual task states."""
-    PENDING = "pending"
-    LOADING = "loading"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
 
 
 class TaskProgress:
@@ -96,8 +87,9 @@ class TaskContext:
 
     Attributes:
         task_id: Unique task identifier
-        video_path: Path to input video
+        video_path: Path to input video or image sequence pattern (e.g., /path/to/%04d.png)
         pipeline_config: Pipeline configuration dict
+        image_sequence_frames: List of image file paths for image sequences (optional)
         state: Current task state
         progress: Progress information
         output_path: Path to output file (set on completion)
@@ -112,6 +104,7 @@ class TaskContext:
         task_id: str,
         video_path: str,
         pipeline_config: Dict[str, Any],
+        image_sequence_frames: Optional[List[str]] = None,
         state: TaskState = TaskState.PENDING,
         progress: Optional[TaskProgress] = None,
         output_path: Optional[str] = None,
@@ -123,6 +116,7 @@ class TaskContext:
         self.task_id = task_id
         self.video_path = video_path
         self.pipeline_config = pipeline_config
+        self.image_sequence_frames = image_sequence_frames or []
         self.state = state
         self.progress = progress or TaskProgress()
         self.output_path = output_path
@@ -157,6 +151,7 @@ class TaskOrchestrator:
             config: ConfigFacade instance (via core.get_config())
         """
         self._config = config
+        self._task_parser: "TaskParser" = TaskParser(config)
         self._current_task: Optional[TaskContext] = None
         self._task_queue: List[TaskContext] = []
         self._state: OrchestratorState = OrchestratorState.IDLE
@@ -168,24 +163,36 @@ class TaskOrchestrator:
     # Task Submission
     # ====================
 
-    def submit_task(self, video_path: str, pipeline_config: Dict[str, Any]) -> str:
+    def submit_task(
+        self,
+        video_path: str,
+        pipeline_config: Dict[str, Any],
+        image_sequence_frames: Optional[List[str]] = None,
+    ) -> str:
         """Submit a single task for processing.
 
         Args:
-            video_path: Path to input video
+            video_path: Path to input video or image sequence pattern
             pipeline_config: Pipeline configuration dict
+            image_sequence_frames: List of image file paths for image sequences (optional)
 
         Returns:
             task_id: Unique task identifier
         """
+        import time
+        _debug_start = time.time()
+        logger.debug(f"[DEBUG] submit_task() called: {video_path}")
+        
         task_id = str(uuid.uuid4())[:8]
         task = TaskContext(
             task_id=task_id,
             video_path=video_path,
             pipeline_config=pipeline_config,
+            image_sequence_frames=image_sequence_frames,
         )
         self._task_queue.append(task)
         logger.info(f"Task {task_id} submitted: {video_path}")
+        logger.debug(f"[DEBUG] submit_task() complete, elapsed={time.time()-_debug_start:.3f}s")
         return task_id
 
     def submit_batch(self, items: List[Tuple[str, Dict[str, Any]]]) -> List[str]:
@@ -213,19 +220,28 @@ class TaskOrchestrator:
 
         If already running, this is a no-op.
         """
+        import time
+        _debug_start = time.time()
+        logger.debug(f"[DEBUG] orchestrator.start() called, state={self._state}")
+        
         if self._state in (OrchestratorState.RUNNING, OrchestratorState.PAUSED):
             logger.warning("Orchestrator already running")
+            logger.debug(f"[DEBUG] orchestrator.start() early return (already running)")
             return
 
         if not self._task_queue:
             logger.warning("No tasks in queue")
+            logger.debug(f"[DEBUG] orchestrator.start() early return (no tasks)")
             return
 
         self._state = OrchestratorState.RUNNING
         self._worker_thread_running = True
+        logger.debug(f"[DEBUG] creating worker thread, elapsed={time.time()-_debug_start:.3f}s")
         self._worker_thread = Thread(target=self._worker_loop, daemon=True)
+        logger.debug(f"[DEBUG] starting worker thread, elapsed={time.time()-_debug_start:.3f}s")
         self._worker_thread.start()
         logger.info("Orchestrator started")
+        logger.debug(f"[DEBUG] orchestrator.start() complete, elapsed={time.time()-_debug_start:.3f}s")
 
     def pause(self) -> None:
         """Pause the current processing task.
@@ -365,80 +381,108 @@ class TaskOrchestrator:
     def _run_task(self, task: TaskContext) -> None:
         """Execute a single task with streaming pipeline.
 
+        Uses StreamingFramePairReader + PreprocessPipeline + Backend.infer()
+        + OrderedResultBuffer for constant-memory streaming processing.
+
         Args:
             task: Task to execute
         """
-        from core.backends import BackendFactory, BackendType
+        self._run_task_v2(task)
+
+    def _run_task_v2(self, task: TaskContext) -> None:
+        """Execute a task using the new streaming pipeline.
+
+        Uses StreamingFramePairReader + PreprocessPipeline + Backend.infer()
+        + OrderedResultBuffer for constant-memory streaming processing.
+
+        Args:
+            task: Task to execute
+        """
+        from core.io.streaming_reader import StreamingFramePairReader
         from core.io.frame_writer import FrameWriterFactory
+        from core.backends.base_backend import BackendFactory
+        from core.io.frame_data import VideoMetadata as LegacyVideoMetadata
 
-        # 1. Resolve configs from pipeline_config
-        backend_config = self._resolve_backend_config(task.pipeline_config)
-        processing_config = self._resolve_processing_config(task.pipeline_config)
+        import time as _time
+        import torch
 
-        # 2. Create and initialize backend
+        _debug_start = _time.time()
+        logger.debug(f"[DEBUG] _run_task_v2() started for task {task.task_id}")
+
+        # 1. Create TaskDescriptor and parse to TaskDefinition
+        descriptor = TaskDescriptor(
+            video_path=task.video_path,
+            pipeline_config=task.pipeline_config,
+            image_sequence_frames=task.image_sequence_frames or None,
+        )
+        task_def = self._task_parser.parse(descriptor)
+        backend_config = task_def.backend_config
+        processing_config = task_def.processing_config
+
+        # 2. Create backend
         backend = BackendFactory.create(backend_config.backend_type, backend_config)
         if not backend.initialize():
             raise RuntimeError("Backend initialization failed")
 
+        # Load model if backend supports it
+        _backend_any: Any = backend
+        if hasattr(_backend_any, "load_model"):
+            _backend_any.load_model(processing_config.interpolation)
+
+        # Checkpoint resume support
+        checkpoint_manager = CheckpointManager(backend_config.temp_dir)
+        checkpoint = checkpoint_manager.load(task.task_id)
+        if checkpoint:
+            logger.info(
+                f"Found checkpoint for task {task.task_id}: "
+                f"frame {checkpoint.last_completed_frame}/{checkpoint.total_frames}"
+            )
+
         try:
-            # 3. Streaming pipeline: process frame -> write frame -> release
-            first_yield = True
-            writer: Optional[FrameWriter] = None
-            output_path: Optional[Path] = None
+            # 3. Open streaming reader
+            reader = StreamingFramePairReader(
+                task.video_path,
+                device=backend_config.get_device(),
+            )
+
+            # 4. Create writer (use output_path from TaskDefinition)
+            output_path = task_def.output_path
+            writer = FrameWriterFactory.create_writer(
+                output_path=output_path,
+                codec_config=task.pipeline_config.get("output", {}),
+            )
+            # Convert to legacy metadata for FrameWriter compat
+            meta = reader.metadata
+            legacy_meta = LegacyVideoMetadata(
+                width=meta.width,
+                height=meta.height,
+                fps=meta.fps,
+                total_frames=meta.total_frames,
+            )
+            writer.open(output_path, legacy_meta)
+
+            # Update checkpoint's output_path if checkpoint exists
+            if checkpoint:
+                checkpoint.output_path = str(output_path)
+
+            # 5. Create preprocessing pipeline
+            from core.preprocess.pipeline import PreprocessPipeline
+            pipeline = PreprocessPipeline(processing_config, backend_config.backend_type)
+
+            # 6. Run streaming loop
+            from core.task_scheduler import ParallelStreamingLoop
+
+            loop = ParallelStreamingLoop()
+            multiplier = processing_config.interpolation.get("multi", 2)
             start_time = datetime.now()
 
-            for frame_idx, frame_data, metadata in backend.process_frames(
-                video_path=task.video_path,
-                processing_config=processing_config,
-                progress_callback=self._make_progress_callback(task),
-                stage_callback=self._make_stage_callback(task),
-                log_callback=logger.info,
-            ):
-                # Check for cancellation
-                if self._state in (OrchestratorState.CANCELLING, OrchestratorState.SHUTTING_DOWN):
-                    task.state = TaskState.CANCELLED
-                    break
-
-                # Wait while paused
-                while self._state == OrchestratorState.PAUSED and self._worker_thread_running:
-                    import time
-                    time.sleep(0.1)
-
-                # Lazy-open writer on first frame (need metadata from first yield)
-                if first_yield:
-                    output_path = self._resolve_output_path(task, metadata)
-                    writer = FrameWriterFactory.create_writer(
-                        output_path=output_path,
-                        codec_config=task.pipeline_config.get("output", {}),
-                    )
-                    video_meta = VideoMetadata(
-                        width=metadata.get("width", 1920),
-                        height=metadata.get("height", 1080),
-                        fps=metadata.get("fps", 30.0),
-                        total_frames=metadata.get("total_frames", 0),
-                    )
-                    writer.open(output_path, video_meta)
-                    first_yield = False
-
-                # Write frame immediately - no accumulation
-                from core.io.frame_data import ProcessedFrameData
-
-                # Assert writer is initialized (guaranteed after first frame)
-                assert writer is not None, "Writer should be initialized after first frame"
-                writer.write_frame(ProcessedFrameData(
-                    data=frame_data,
-                    source_frame_idx=frame_idx,
-                ))
-
-                # Update progress
-                task.progress.current_frame = frame_idx
-                task.progress.total_frames = metadata.get("total_frames", 0)
+            def progress_callback(current: int, total: int, fps: float) -> None:
+                task.progress.current_frame = current
+                task.progress.total_frames = total
+                task.progress.fps = fps
                 elapsed = (datetime.now() - start_time).total_seconds()
                 task.progress.elapsed_seconds = elapsed
-                if elapsed > 0:
-                    task.progress.fps = frame_idx / elapsed
 
-                # Emit progress event
                 from core.events import task_progress
                 task_progress.send(
                     self,
@@ -446,15 +490,35 @@ class TaskOrchestrator:
                     progress=task.progress,
                 )
 
-                # frame_data can now be garbage collected
+                # Check cancellation
+                if self._state in (OrchestratorState.CANCELLING, OrchestratorState.SHUTTING_DOWN):
+                    loop.cancel()
 
-            # Finalize
-            if writer:
-                writer.close()
+            loop.run(
+                reader=reader,
+                pipeline=pipeline,
+                backend=backend,
+                writer=writer,
+                multiplier=multiplier,
+                progress_callback=progress_callback,
+                checkpoint=checkpoint,
+                checkpoint_manager=checkpoint_manager,
+                task_id=task.task_id,
+            )
 
-            if task.state != TaskState.CANCELLED:
+            # 7. Finalize
+            writer.close()
+
+            if self._state in (OrchestratorState.CANCELLING, OrchestratorState.SHUTTING_DOWN):
+                task.state = TaskState.CANCELLED
+            else:
                 task.state = TaskState.COMPLETED
-                task.output_path = str(output_path) if not first_yield else None
+                task.output_path = str(output_path)
+
+            logger.debug(
+                f"[DEBUG] _run_task_v2() complete, elapsed="
+                f"{_time.time()-_debug_start:.3f}s"
+            )
 
         except Exception as e:
             task.state = TaskState.FAILED
@@ -463,110 +527,6 @@ class TaskOrchestrator:
 
         finally:
             backend.cleanup()
-
-    def _resolve_backend_config(self, pipeline_config: Dict[str, Any]) -> "BackendConfig":
-        """Resolve BackendConfig from pipeline configuration.
-
-        Args:
-            pipeline_config: Pipeline configuration dict
-
-        Returns:
-            BackendConfig instance
-        """
-        from core.backends import BackendConfig, BackendType
-
-        # Determine backend type from pipeline config
-        backend_type_str = pipeline_config.get("backend", "torch")
-        try:
-            backend_type = BackendType(backend_type_str)
-        except ValueError:
-            backend_type = BackendType.TORCH
-
-        # Get settings from ConfigFacade sub-configs
-        runtime_settings = self._config.runtime.get_all()
-
-        return BackendConfig(
-            backend_type=backend_type,
-            models_dir=pipeline_config.get("models_dir", "models"),
-            temp_dir=pipeline_config.get("temp_dir", "temp"),
-            output_dir=pipeline_config.get("output_dir", "output"),
-            num_threads=runtime_settings.get("num_threads", 4),
-            device=runtime_settings.get("device", "auto"),
-            fp16=runtime_settings.get("fp16", True),
-            extra=pipeline_config.get("backend_extra", {}),
-        )
-
-    def _resolve_processing_config(self, pipeline_config: Dict[str, Any]) -> "ProcessingConfig":
-        """Resolve ProcessingConfig from pipeline configuration.
-
-        Args:
-            pipeline_config: Pipeline configuration dict
-
-        Returns:
-            ProcessingConfig instance
-        """
-        from core.backends import ProcessingConfig
-
-        return ProcessingConfig(
-            interpolation=pipeline_config.get("interpolation", {}),
-            upscaling=pipeline_config.get("upscaling", {}),
-            scene_detection=pipeline_config.get("scene_detection", {}),
-            output=pipeline_config.get("output", {}),
-        )
-
-    def _resolve_output_path(self, task: TaskContext, metadata: Dict[str, Any]) -> Path:
-        """Resolve output path for the processed video.
-
-        Args:
-            task: Task context
-            metadata: Video metadata from first processed frame
-
-        Returns:
-            Output path
-        """
-        from core.codec_manager import get_codec_manager, CodecConfig
-
-        # Get output config from pipeline config and global config
-        output_config = task.pipeline_config.get("output", {})
-
-        # Get settings from ConfigFacade sub-configs
-        # Output settings: codec, quality, etc.
-        output_dir = output_config.get("output_dir", "")
-        if not output_dir:
-            # Get from paths config
-            output_dir = self._config.paths.get_output_dir()
-
-        output_subdir = output_config.get("output_subdir", "")
-        output_filename = output_config.get("output_filename", "")
-
-        # Generate output filename if not specified
-        if not output_filename:
-            input_path = Path(task.video_path)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_filename = f"{input_path.stem}_processed_{timestamp}"
-
-        # Get extension from codec manager
-        codec_manager = get_codec_manager()
-        codec_config = CodecConfig.from_dict(output_config)
-        codec_manager.set_config(codec_config)
-
-        # Determine extension based on codec
-        codec = codec_config.codec or "hevc_nvenc"
-        if codec in ("hevc_nvenc", "h265_nvenc"):
-            extension = ".mkv"
-        elif codec in ("h264_nvenc", "avc_nvenc"):
-            extension = ".mp4"
-        elif codec in ("vp9", "av1"):
-            extension = ".mkv"
-        elif codec == "gif":
-            extension = ".gif"
-        else:
-            extension = ".mkv"  # Default
-
-        output_path = Path(output_dir) / f"{output_filename}{extension}"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        return output_path
 
     def _make_progress_callback(self, task: TaskContext) -> Callable[[int, int, float], None]:
         """Create progress callback for backend.
@@ -601,7 +561,6 @@ class TaskOrchestrator:
 
 __all__ = [
     "OrchestratorState",
-    "TaskState",
     "TaskProgress",
     "TaskContext",
     "TaskOrchestrator",
