@@ -15,7 +15,6 @@
     - rife/
     - film/
     - amt/
-    - ifrnet/
 """
 
 from .base import (
@@ -56,8 +55,13 @@ from .vfi_torch import (
     # 模型
     RIFEModel,
     FILMModel,
-    IFRNetModel,
     AMTModel,
+    XVFIModel,
+    ATMVFIModel,
+    MoMoModel,
+    M2MVFIModel,
+    STMFNetModel,
+    FLAVRModel,
     # 注册表
     MODEL_REGISTRY,
     get_model,
@@ -104,8 +108,13 @@ __all__ = [
     # 模型
     "RIFEModel",
     "FILMModel",
-    "IFRNetModel",
     "AMTModel",
+    "XVFIModel",
+    "ATMVFIModel",
+    "MoMoModel",
+    "M2MVFIModel",
+    "STMFNetModel",
+    "FLAVRModel",
     # 注册表
     "MODEL_REGISTRY",
     "get_model",

@@ -10,14 +10,28 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from core.model_manager import ModelManager, ModelTypeInfo, CheckpointInfo, MODEL_DEFINITIONS
+from core.model_manager import (
+    ModelManager,
+    ModelTypeInfo,
+    CheckpointInfo,
+    MODEL_DEFINITIONS,
+    CHECKPOINT_VERSION_MAP,
+)
 
 
 @dataclass
 class ModelSelection:
-    """Represents a model selection state."""
+    """Represents a model selection state.
+
+    Attributes:
+        model_type: 模型类型（如 ``"rife"``）
+        checkpoint_name: checkpoint 文件名（UI 展示用，如 ``"rife49.pth"``）
+        version: 版本令牌（config 语义，spec §7，如 ``"4.9"``/``"fp32"``）
+        display_name: 模型类型的人类可读名
+    """
     model_type: str = "rife"
     checkpoint_name: Optional[str] = None
+    version: Optional[str] = None
     display_name: str = ""
     
     @property
@@ -229,7 +243,6 @@ class ModelSelectionManager(QObject):
                 defaults = {
                     "rife": "rife49.pth",
                     "film": "film_net_fp32.pt",
-                    "ifrnet": "IFRNet_L_Vimeo90K.pth",
                     "amt": "amt-s.pth",
                 }
                 default_ckpt = defaults.get(self._current_type)
@@ -239,74 +252,56 @@ class ModelSelectionManager(QObject):
                     self._current_checkpoint = installed[0].name
     
     def _version_to_checkpoint(self, model_type: str, version: str) -> Optional[str]:
-        """Convert version string to checkpoint name.
+        """Convert version token to checkpoint name.
+
+        Single source of truth is :mod:`core.models.asset_resolver` (spec §4/§7).
 
         Args:
             model_type: Model type name
-            version: Version string (e.g., "4.9", "fp32")
+            version: Version token (e.g., "4.9", "fp32")
 
         Returns:
             Checkpoint filename or None
         """
-        version_map = {
-            "rife": {
-                "4.7": "rife47.pth",
-                "4.9": "rife49.pth",
-                "4.17": "rife417.pth",
-                "4.26": "rife426.pth",
-            },
-            "film": {
-                "fp32": "film_net_fp32.pt",
-            },
-            "ifrnet": {
-                "S_Vimeo90K": "IFRNet_S_Vimeo90K.pth",
-                "L_Vimeo90K": "IFRNet_L_Vimeo90K.pth",
-            },
-            "amt": {
-                "s": "amt-s.pth",
-                "l": "amt-l.pth",
-                "g": "amt-g.pth",
-            },
-        }
-
-        if model_type in version_map:
-            return version_map[model_type].get(version)
-        return None
+        try:
+            from core.models.asset_resolver import version_to_checkpoint
+            return version_to_checkpoint(model_type, version)
+        except ImportError:  # 过渡期回退：复用 model_manager 的派生映射（同源）
+            for ckpt, ver in CHECKPOINT_VERSION_MAP.get(model_type, {}).items():
+                if ver == version:
+                    return ckpt
+            return None
 
     def _checkpoint_to_version(self, model_type: str, checkpoint: str) -> str:
-        """Convert checkpoint name to version string.
+        """Convert checkpoint name to version token.
+
+        Single source of truth is :mod:`core.models.asset_resolver` (spec §4/§7).
+        Unknown checkpoints fall back to their own name so round-tripping is safe.
 
         Args:
             model_type: Model type name
             checkpoint: Checkpoint filename
 
         Returns:
-            Version string
+            Version token
         """
-        version_map = {
-            "rife": {
-                "rife47.pth": "4.7",
-                "rife49.pth": "4.9",
-                "rife417.pth": "4.17",
-                "rife426.pth": "4.26",
-            },
-            "film": {
-                "film_net_fp32.pt": "fp32",
-            },
-            "ifrnet": {
-                "IFRNet_S_Vimeo90K.pth": "S_Vimeo90K",
-                "IFRNet_L_Vimeo90K.pth": "L_Vimeo90K",
-            },
-            "amt": {
-                "amt-s.pth": "s",
-                "amt-l.pth": "l",
-                "amt-g.pth": "g",
-            },
-        }
-
-        if model_type in version_map:
-            return version_map[model_type].get(checkpoint, checkpoint)
+        try:
+            from core.models.asset_resolver import checkpoint_to_version
+            version = checkpoint_to_version(model_type, checkpoint)
+            if version is not None:
+                return version
+        except ImportError:  # 过渡期回退：复用 model_manager 的派生映射（同源）
+            if checkpoint in CHECKPOINT_VERSION_MAP.get(model_type, {}):
+                return CHECKPOINT_VERSION_MAP[model_type][checkpoint]
         return checkpoint
+
+    def checkpoint_to_version(self, model_type: str, checkpoint: str) -> str:
+        """Public wrapper: checkpoint 名 -> 版本令牌（spec §7 语义）。"""
+        return self._checkpoint_to_version(model_type, checkpoint)
+
+    def version_to_checkpoint(self, model_type: str, version: str) -> Optional[str]:
+        """Public wrapper: 版本令牌 -> checkpoint 名（UI 展示用）。"""
+        return self._version_to_checkpoint(model_type, version)
     
     # Public API
     
@@ -385,6 +380,7 @@ class ModelSelectionManager(QObject):
         return ModelSelection(
             model_type=self._current_type,
             checkpoint_name=self._current_checkpoint,
+            version=self.get_version_string() or None,
             display_name=display_name,
         )
     

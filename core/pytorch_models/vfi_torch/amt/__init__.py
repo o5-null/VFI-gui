@@ -10,22 +10,7 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 
 from ..base import PyTorchVFIModel, VFIConfig, ModelType
-from ..utils import load_model_weights, download_model, InputPadder, InputPadder
-
-
-def warp(img: torch.Tensor, flow: torch.Tensor) -> torch.Tensor:
-    """Warp image using optical flow."""
-    B, _, H, W = flow.shape
-    xx = torch.linspace(-1.0, 1.0, W).view(1, 1, 1, W).expand(B, -1, H, -1)
-    yy = torch.linspace(-1.0, 1.0, H).view(1, 1, H, 1).expand(B, -1, -1, W)
-    grid = torch.cat([xx, yy], 1).to(img)
-    flow_ = torch.cat([
-        flow[:, 0:1, :, :] / ((W - 1.0) / 2.0),
-        flow[:, 1:2, :, :] / ((H - 1.0) / 2.0)
-    ], 1)
-    grid_ = (grid + flow_).permute(0, 2, 3, 1)
-    output = F.grid_sample(img, grid_, mode='bilinear', padding_mode='border', align_corners=True)
-    return output
+from ..utils import load_model_weights, download_model, InputPadder, warp, ResBlock, make_timestep_tensor
 
 
 def coords_grid(batch: int, ht: int, wd: int, device: torch.device) -> torch.Tensor:
@@ -39,26 +24,6 @@ def coords_grid(batch: int, ht: int, wd: int, device: torch.device) -> torch.Ten
     return coords[None].repeat(batch, 1, 1, 1)
 
 
-class ResBlock(nn.Module):
-    """Residual block with PReLU activation."""
-    
-    def __init__(self, in_channels: int, out_channels: int):
-        super().__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, 1, 1)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, 1, 1)
-        self.prelu = nn.PReLU(out_channels)
-        
-        if in_channels != out_channels:
-            self.skip = nn.Conv2d(in_channels, out_channels, 1, 1, 0)
-        else:
-            self.skip = nn.Identity()
-            
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        out = self.prelu(self.conv1(x))
-        out = self.conv2(out)
-        return self.prelu(out + self.skip(x))
-
-
 class Encoder(nn.Module):
     """Feature encoder for AMT."""
     
@@ -69,10 +34,10 @@ class Encoder(nn.Module):
         self.conv3 = nn.Conv2d(channels[1], channels[2], 3, 2, 1)
         self.conv4 = nn.Conv2d(channels[2], channels[3], 3, 2, 1)
         
-        self.res1 = ResBlock(channels[0], channels[0])
-        self.res2 = ResBlock(channels[1], channels[1])
-        self.res3 = ResBlock(channels[2], channels[2])
-        self.res4 = ResBlock(channels[3], channels[3])
+        self.res1 = ResBlock(channels[0], channels[0], act_layer=nn.PReLU, act_kwargs={"num_parameters": channels[0]})
+        self.res2 = ResBlock(channels[1], channels[1], act_layer=nn.PReLU, act_kwargs={"num_parameters": channels[1]})
+        self.res3 = ResBlock(channels[2], channels[2], act_layer=nn.PReLU, act_kwargs={"num_parameters": channels[2]})
+        self.res4 = ResBlock(channels[3], channels[3], act_layer=nn.PReLU, act_kwargs={"num_parameters": channels[3]})
         
     def forward(self, x: torch.Tensor) -> tuple:
         f1 = self.res1(F.relu(self.conv1(x)))
@@ -325,24 +290,14 @@ class AMTModel(PyTorchVFIModel):
         if self._model is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
         
-        squeeze_output = False
-        if frame0.dim() == 3:
-            frame0 = frame0.unsqueeze(0)
-            frame1 = frame1.unsqueeze(0)
-            squeeze_output = True
-        
+        frame0, frame1, squeeze_output = self._squeeze_batch(frame0, frame1)
+
         # Use InputPadder for dimensions divisible by 16
         padder = InputPadder(frame0.shape, 16)
         frame0_pad = padder.pad(frame0)
         frame1_pad = padder.pad(frame1)
         
-        # Create timestep tensor (embt)
-        embt = torch.full(
-            (frame0_pad.shape[0], 1),
-            timestep,
-            device=frame0_pad.device,
-            dtype=frame0_pad.dtype
-        )
+        embt = make_timestep_tensor(frame0_pad.shape[0], timestep, frame0_pad.device, frame0_pad.dtype)
         
         with torch.no_grad():
             result = self._model(frame0_pad, frame1_pad, embt, scale_factor=scale)

@@ -18,15 +18,14 @@ class ModelType(Enum):
     """Supported interpolation model types."""
     RIFE = "rife"
     FILM = "film"
-    IFRNET = "ifrnet"  # Changed from IFRNet to IFRNET for consistency
     AMT = "amt"
-    GMFSS = "gmfss"
     STMFNET = "stmfnet"
     FLAVR = "flavr"
     CAIN = "cain"
     XVFI = "xvfi"
     ATM = "atm"
     MOMO = "momo"
+    M2M = "m2m"
 
 
 class BackendType(Enum):
@@ -202,6 +201,27 @@ class PyTorchVFIModel(VFIModelBase):
         """
         pass
     
+    @staticmethod
+    def _squeeze_batch(
+        frame0: torch.Tensor,
+        frame1: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, bool]:
+        """Add batch dimension if inputs are single frames.
+
+        Args:
+            frame0: First frame [C, H, W] or [B, C, H, W]
+            frame1: Second frame [C, H, W] or [B, C, H, W]
+
+        Returns:
+            (frame0, frame1, squeeze_flag) where frames are [B, C, H, W]
+            and squeeze_flag indicates whether to squeeze the output.
+        """
+        squeeze = frame0.dim() == 3
+        if squeeze:
+            frame0 = frame0.unsqueeze(0)
+            frame1 = frame1.unsqueeze(0)
+        return frame0, frame1, squeeze
+
     def interpolate_with_result(
         self,
         frame0: torch.Tensor,
@@ -304,22 +324,24 @@ def get_model(config: VFIConfig) -> PyTorchVFIModel:
     """
     from .rife import RIFEModel
     from .film import FILMModel
-    from .ifrnet import IFRNetModel
     from .amt import AMTModel
     from .xvfi import XVFIModel
-    from .gmfss import GMFSSModel
     from .atm import ATMVFIModel
     from .momo import MoMoModel
+    from .m2m import M2MVFIModel
+    from .stmfnet import STMFNetModel
+    from .flavr import FLAVRModel
 
     model_classes = {
         ModelType.RIFE: RIFEModel,
         ModelType.FILM: FILMModel,
-        ModelType.IFRNET: IFRNetModel,
         ModelType.AMT: AMTModel,
         ModelType.XVFI: XVFIModel,
-        ModelType.GMFSS: GMFSSModel,
         ModelType.ATM: ATMVFIModel,
         ModelType.MOMO: MoMoModel,
+        ModelType.M2M: M2MVFIModel,
+        ModelType.STMFNET: STMFNetModel,
+        ModelType.FLAVR: FLAVRModel,
     }
     
     if config.model_type not in model_classes:

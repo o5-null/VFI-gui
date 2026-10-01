@@ -61,7 +61,26 @@
 
 ### 待实现
 
+#### 1. 代码审查修复 (2026-06-21 审查发现)
+> 详见 `docs/dev-docs/20260621-120000-code-review-fixes.md`
 
+**🔴 必须修复:**
+- [ ] #1 替换生产代码中的 `assert` 为显式 `raise`（15+ 处，涉及 rife/m2m/atm/stmfnet/xvfi 等模型文件 + subprocess_backend + base.py）
+- [ ] #3 `core/pytorch_models/model_manager.py` 的 10 处 `print()` 替换为 `logger`（违反 CLAUDE.md 规范）
+
+**🟡 应当修复:**
+- [ ] #2 统一重复的 `DownloadWorker` 类（core/workers vs ui/widgets/dialogs/model_manager_dialog.py）
+- [ ] #4 修复 `model_manager_dialog.py:301` 的 UI 线程阻塞 `wait()` 调用
+- [ ] #6 `_BenchmarkWorker` 信号类型安全修复（分离 finished/error 信号）
+- [ ] #7 确认 `torch_backend.py` 废弃状态，清理或更新文档
+
+**🟢 建议优化:**
+- [ ] #5 God Object 拆分（benchmark_runner 1329 行 / model_inspector 1108 行 / model_manager_dialog 927 行 等）
+- [ ] #8 为 `rife/__init__.py:326` 的 `torch.load` 显式指定 `weights_only=False`
+- [ ] #9 提取 magic numbers 为命名常量（frame_cache 4096 / checkpoint_manager 86400 等）
+- [ ] #11 修复 `model_manager_dialog.py:84` 的 `with` 块内冗余 `f.close()`
+
+---
 
 #### 2. Tile 处理实现 (中等优先级)
 **问题**: FILM/RIFE 等模型无 tile 处理，4K 视频全帧处理导致 OOM
@@ -120,14 +139,18 @@ def _interpolate_frames_chunked(self, frames, multiplier, chunk_size=50):
 ## 🟡 中优先级
 
 #### 4. TensorRT 推理后端
-**影响文件**: `core/backends/tensorrt_backend.py`（新建）
+**影响文件**: `core/backends/tensorrt_rtx_backend.py`（已实现）
+
+**状态**: ✅ 已实现为原生 TensorRT-RTX（`tensorrt_rtx`，非 ORT EP）— `TensorRTRTXBackend` 解析 RIFE ONNX 后按实际尺寸惰性构建静态引擎，引擎序列化缓存到 `models/trt_rtx_cache/<model>_<C>_<H>xW.engine`；已在 `core/backends/__init__.py` 注册为 `BackendType.TENSORRT_RTX`。
 
 **参考**: VSGAN-tensorrt-docker 的 rife_trt.py
 
 ---
 
 #### 5. ONNX Runtime 推理后端
-**影响文件**: `core/backends/onnx_backend.py`（新建）
+**影响文件**: `core/backends/onnx_backend.py`（已实现）
+
+**状态**: ✅ 已实现（基础版）— `OnnxBackend` 支持 RIFE ONNX 模型，动态读取输入/输出名与通道数（C=7 / C=11），优先 CUDA EP 回退 CPU EP，已在 `core/backends/__init__.py` 注册为 `BackendType.ONNX`。
 
 **参考**: vs-mlrt / vsort
 
@@ -239,6 +262,7 @@ UserWarning: 'torch.load' received a zip file that looks like a TorchScript arch
 
 | 日期 | 变更 |
 |------|------|
+| 2026-06-21 | 添加代码审查修复待办（11 项，详见 dev-docs/20260621-120000-code-review-fixes.md） |
 | 2026-06-16 | 合并 `D:\code\VFI\todo.md`，更新文件路径为重构后位置，添加遗漏项 |
 | 2026-06-16 | ATM-VFI + MoMo VFI 模型移植 (84e3b1a)，更新完成状态 |
 | 2026-04-28 | 修复 FILM TorchScript FP16 问题 |

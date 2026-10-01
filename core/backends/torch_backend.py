@@ -31,10 +31,15 @@ class TorchBackend(BaseBackend):
     
     Uses the torch_backend module for frame interpolation with
     support for RIFE, FILM, IFRNet, and AMT models.
+
+    DEPRECATED: the torch/CUDA inference path is deprecated in favor of the
+    ONNX Runtime backend (BackendType.ONNX) and the forthcoming TensorRT-RTX
+    backend. Retained as a fallback.
     """
     
     # Backend metadata
     BACKEND_TYPE = BackendType.TORCH
+    DEPRECATED = True
     BACKEND_NAME = "PyTorch"
     BACKEND_DESCRIPTION = "Pure PyTorch inference backend"
     
@@ -47,7 +52,6 @@ class TorchBackend(BaseBackend):
     SUPPORTED_MODELS = {
         "rife": ["4.0", "4.6", "4.7", "4.17", "4.22", "4.26"],
         "film": ["fp32"],
-        "ifrnet": ["S_Vimeo90K", "L_Vimeo90K"],
         "amt": ["s", "l", "g"],
     }
     
@@ -129,7 +133,6 @@ class TorchBackend(BaseBackend):
             model_type_map = {
                 "rife": ModelType.RIFE,
                 "film": ModelType.FILM,
-                "ifrnet": ModelType.IFRNET,
                 "amt": ModelType.AMT,
             }
 
@@ -183,10 +186,6 @@ class TorchBackend(BaseBackend):
             },
             "film": {
                 "fp32": "film_net_fp32.pt",
-            },
-            "ifrnet": {
-                "S_Vimeo90K": "IFRNet_S_Vimeo90K.pth",
-                "L_Vimeo90K": "IFRNet_L_Vimeo90K.pth",
             },
             "amt": {
                 "s": "amt-s.pth",

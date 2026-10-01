@@ -6,10 +6,10 @@ RIFE 模型实现。
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Any
 
 from ..base import PyTorchVFIModel, VFIConfig, ModelType
-from ..utils import get_device, clear_cache
+from ..utils import get_device, clear_cache, warp
 
 
 class ResConv(nn.Module):
@@ -22,47 +22,6 @@ class ResConv(nn.Module):
 
     def forward(self, x):
         return self.relu(self.conv(x) * self.beta + x)
-
-
-# Cache for backward warping grid
-_backwarp_tenGrid: Dict = {}
-
-
-def warp(tenInput: torch.Tensor, tenFlow: torch.Tensor) -> torch.Tensor:
-    """Warp input tensor using flow field."""
-    device = tenInput.device
-    k = (str(device), str(tenFlow.size()))
-    
-    if k not in _backwarp_tenGrid:
-        tenHorizontal = (
-            torch.linspace(-1.0, 1.0, tenFlow.shape[3], device=device)
-            .view(1, 1, 1, tenFlow.shape[3])
-            .expand(tenFlow.shape[0], -1, tenFlow.shape[2], -1)
-        )
-        tenVertical = (
-            torch.linspace(-1.0, 1.0, tenFlow.shape[2], device=device)
-            .view(1, 1, tenFlow.shape[2], 1)
-            .expand(tenFlow.shape[0], -1, -1, tenFlow.shape[3])
-        )
-        _backwarp_tenGrid[k] = torch.cat([tenHorizontal, tenVertical], 1).to(device)
-
-    tenFlow = torch.cat([
-        tenFlow[:, 0:1, :, :] / ((tenInput.shape[3] - 1.0) / 2.0),
-        tenFlow[:, 1:2, :, :] / ((tenInput.shape[2] - 1.0) / 2.0),
-    ], 1)
-
-    g = (_backwarp_tenGrid[k] + tenFlow).permute(0, 2, 3, 1)
-    
-    if g.dtype != tenInput.dtype:
-        g = g.to(tenInput.dtype)
-
-    return F.grid_sample(
-        input=tenInput,
-        grid=g,
-        mode="bilinear",
-        padding_mode="border",
-        align_corners=True,
-    )
 
 
 def conv(in_planes: int, out_planes: int, kernel_size: int = 3, stride: int = 1, 
@@ -395,13 +354,8 @@ class RIFEModel(PyTorchVFIModel):
         if not self.is_loaded:
             self.load_model()
         
-        # Ensure batch dimension
-        squeeze_output = False
-        if frame0.dim() == 3:
-            frame0 = frame0.unsqueeze(0)
-            frame1 = frame1.unsqueeze(0)
-            squeeze_output = True
-        
+        frame0, frame1, squeeze_output = self._squeeze_batch(frame0, frame1)
+
         # Move to device and convert dtype
         frame0, frame1 = self.prepare_frames(frame0, frame1)
         

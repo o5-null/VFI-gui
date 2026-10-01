@@ -355,12 +355,8 @@ class XVFIModel(PyTorchVFIModel):
         if not self.is_loaded:
             raise RuntimeError("Model not loaded. Call load_model() first.")
         
-        squeeze_output = False
-        if frame0.dim() == 3:
-            frame0 = frame0.unsqueeze(0)
-            frame1 = frame1.unsqueeze(0)
-            squeeze_output = True
-        
+        frame0, frame1, squeeze_output = self._squeeze_batch(frame0, frame1)
+
         frame0, frame1 = self.prepare_frames(frame0, frame1)
         
         # Calculate padding

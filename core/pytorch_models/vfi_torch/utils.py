@@ -16,7 +16,6 @@ from tqdm import tqdm
 BASE_MODEL_URLS = {
     "rife": "https://github.com/styler00dollar/VSGAN-tensorrt-docker/releases/download/models/",
     "film": "https://github.com/dajes/frame-interpolation-pytorch/releases/download/v1.0.0/",
-    "ifrnet": "https://github.com/styler00dollar/VSGAN-tensorrt-docker/releases/download/models/",
     "amt": "https://huggingface.co/lalala125/AMT/resolve/main/",
 }
 
@@ -299,3 +298,130 @@ class InputPadder:
             self._pad[2]: tensor.shape[-2] - self._pad[3],
             self._pad[0]: tensor.shape[-1] - self._pad[1]
         ]
+
+
+# ============================================================================
+# Shared warp() — backward warping with grid_sample
+# ============================================================================
+
+_backwarp_tenGrid: dict = {}
+
+
+def warp(tenInput: torch.Tensor, tenFlow: torch.Tensor) -> torch.Tensor:
+    """Warp a tensor using an optical flow field.
+
+    Uses a cached coordinate grid keyed by (device, flow_size) for efficiency.
+
+    Args:
+        tenInput: Input tensor [B, C, H, W]
+        tenFlow:  Flow tensor [B, 2, H, W]
+
+    Returns:
+        Warped tensor [B, C, H, W]
+    """
+    device = tenFlow.device
+    k = (str(device), str(tenFlow.size()))
+
+    if k not in _backwarp_tenGrid:
+        tenHorizontal = (
+            torch.linspace(-1.0, 1.0, tenFlow.shape[3], device=device)
+            .view(1, 1, 1, tenFlow.shape[3])
+            .expand(tenFlow.shape[0], -1, tenFlow.shape[2], -1)
+        )
+        tenVertical = (
+            torch.linspace(-1.0, 1.0, tenFlow.shape[2], device=device)
+            .view(1, 1, tenFlow.shape[2], 1)
+            .expand(tenFlow.shape[0], -1, -1, tenFlow.shape[3])
+        )
+        _backwarp_tenGrid[k] = torch.cat([tenHorizontal, tenVertical], 1).to(device)
+
+    tenFlow = torch.cat([
+        tenFlow[:, 0:1, :, :] / ((tenInput.shape[3] - 1.0) / 2.0),
+        tenFlow[:, 1:2, :, :] / ((tenInput.shape[2] - 1.0) / 2.0),
+    ], 1)
+
+    g = (_backwarp_tenGrid[k] + tenFlow).permute(0, 2, 3, 1)
+
+    if g.dtype != tenInput.dtype:
+        g = g.to(tenInput.dtype)
+
+    return torch.nn.functional.grid_sample(
+        input=tenInput,
+        grid=g,
+        mode="bilinear",
+        padding_mode="border",
+        align_corners=True,
+    )
+
+
+# ============================================================================
+# Shared ResBlock — parameterizable residual block
+# ============================================================================
+
+
+class ResBlock(torch.nn.Module):
+    """Residual block with configurable activation.
+
+    Each ResBlock consists of: conv1 → activation → conv2 → skip + activation.
+
+    Args:
+        in_channels: Number of input channels
+        out_channels: Number of output channels
+        act_layer: Activation layer class (default: ``torch.nn.ReLU``)
+        act_kwargs: Keyword arguments for the activation layer
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        act_layer: type = torch.nn.ReLU,
+        act_kwargs: Optional[dict] = None,
+    ):
+        super().__init__()
+        self.conv1 = torch.nn.Conv2d(in_channels, out_channels, 3, 1, 1)
+        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, 3, 1, 1)
+        kwargs = act_kwargs or {}
+        self.activation = act_layer(**kwargs)
+
+        if in_channels != out_channels:
+            self.skip = torch.nn.Conv2d(in_channels, out_channels, 1, 1, 0)
+        else:
+            self.skip = torch.nn.Identity()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = self.activation(self.conv1(x))
+        out = self.conv2(out)
+        return self.activation(out + self.skip(x))
+
+
+# ============================================================================
+# Shared timestep tensor creation
+# ============================================================================
+
+
+def make_timestep_tensor(
+    batch_size: int,
+    timestep: float,
+    device: torch.device,
+    dtype: torch.dtype = torch.float32,
+    ndim: int = 2,
+) -> torch.Tensor:
+    """Create a timestep tensor of the requested shape.
+
+    Args:
+        batch_size: Batch dimension
+        timestep:  Scalar timestep value (0.0 to 1.0)
+        device:    Target device
+        dtype:     Target dtype
+        ndim:      Number of dimensions: 2 → [B, 1], 4 → [B, 1, 1, 1]
+
+    Returns:
+        Tensor filled with `timestep` in the requested shape
+    """
+    if ndim == 2:
+        return torch.full((batch_size, 1), timestep, device=device, dtype=dtype)
+    elif ndim == 4:
+        return torch.full((batch_size, 1, 1, 1), timestep, device=device, dtype=dtype)
+    else:
+        raise ValueError(f"Unsupported ndim: {ndim} (supported: 2, 4)")

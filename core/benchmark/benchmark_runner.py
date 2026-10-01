@@ -146,7 +146,7 @@ class BenchmarkConfig:
     example_dir: str = "example/1080p"
     
     # Model configuration
-    model_type: str = "rife"          # Model type string (rife, film, amt, ifrnet)
+    model_type: str = "rife"          # Model type string (rife, film, amt)
     checkpoint_name: str = "rife49.pth"  # Checkpoint filename
     multiplier: int = 2
     dtype: str = "float16"
@@ -487,9 +487,7 @@ class BenchmarkRunner:
         model_type_map = {
             "rife": ModelType.RIFE,
             "film": ModelType.FILM,
-            "ifrnet": ModelType.IFRNET,
             "amt": ModelType.AMT,
-            "gmfss": ModelType.GMFSS,
             "stmfnet": ModelType.STMFNET,
             "flavr": ModelType.FLAVR,
             "cain": ModelType.CAIN,
@@ -570,7 +568,19 @@ class BenchmarkRunner:
         Returns:
             Model version string (e.g., "4.9")
         """
-        # Checkpoint-to-version mappings per model type
+        # Single source of truth: asset_resolver (see
+        # docs/ONNX_TRT_MULTI_MODEL_SPEC.md §4). Keeps model_version semantics
+        # consistent across benchmark / UI / backends.
+        try:
+            from core.models.asset_resolver import checkpoint_to_version
+
+            version = checkpoint_to_version(model_type.lower(), Path(checkpoint_name).name)
+            if version:
+                return version
+        except Exception:
+            pass
+
+        # Fallback: local mapping (kept for transition / partial deployments)
         version_maps: Dict[str, Dict[str, str]] = {
             "rife": {
                 "sudo_rife4_269.662_testV1_scale1.pth": "4.0",
@@ -582,12 +592,6 @@ class BenchmarkRunner:
             },
             "film": {
                 "film_net_fp32.pt": "fp32",
-            },
-            "ifrnet": {
-                "IFRNet_S_Vimeo90K.pth": "S_Vimeo90K",
-                "IFRNet_L_Vimeo90K.pth": "L_Vimeo90K",
-                "IFRNet_S_GoPro.pth": "S_GoPro",
-                "IFRNet_L_GoPro.pth": "L_GoPro",
             },
             "amt": {
                 "amt-s.pth": "s",
@@ -1197,7 +1201,7 @@ def run_cli():
         "--model", "-M",
         type=str,
         default="rife",
-        help="Model type: rife, film, amt, ifrnet (default: rife)"
+        help="Model type: rife, film, amt (default: rife)"
     )
     
     parser.add_argument(

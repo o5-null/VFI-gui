@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 from pathlib import Path
 
 from ..base import PyTorchVFIModel, VFIConfig, ModelType, DType
-from ..utils import load_model_weights, download_model
+from ..utils import load_model_weights, download_model, make_timestep_tensor
 
 
 class FeatureExtractor(nn.Module):
@@ -218,13 +218,8 @@ class FILMModel(PyTorchVFIModel):
         if self._model is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
         
-        # Ensure batch dimension
-        squeeze_output = False
-        if frame0.dim() == 3:
-            frame0 = frame0.unsqueeze(0)
-            frame1 = frame1.unsqueeze(0)
-            squeeze_output = True
-        
+        frame0, frame1, squeeze_output = self._squeeze_batch(frame0, frame1)
+
         # Convert to model's dtype if needed
         if frame0.dtype != self.torch_dtype:
             frame0 = frame0.to(dtype=self.torch_dtype)
@@ -240,13 +235,7 @@ class FILMModel(PyTorchVFIModel):
             frame0 = F.pad(frame0, padding)
             frame1 = F.pad(frame1, padding)
         
-        # Create timestep tensor
-        timestep_tensor = torch.full(
-            (frame0.shape[0], 1), 
-            timestep, 
-            device=frame0.device, 
-            dtype=frame0.dtype
-        )
+        timestep_tensor = make_timestep_tensor(frame0.shape[0], timestep, frame0.device, frame0.dtype)
         
         with torch.no_grad():
             output = self._model(frame0, frame1, timestep_tensor)

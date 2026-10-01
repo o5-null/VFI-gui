@@ -62,6 +62,20 @@ def _register_builtin_backends():
     except ImportError as e:
         logger.warning(f"Failed to register TorchBackend: {e}")
 
+    # ONNX Runtime backend (active)
+    try:
+        from .onnx_backend import OnnxBackend
+        BackendFactory.register(BackendType.ONNX, OnnxBackend)
+    except ImportError as e:
+        logger.warning(f"Failed to register OnnxBackend: {e}")
+
+    # TensorRT-RTX backend (active)
+    try:
+        from .tensorrt_rtx_backend import TensorRTRTXBackend
+        BackendFactory.register(BackendType.TENSORRT_RTX, TensorRTRTXBackend)
+    except ImportError as e:
+        logger.warning(f"Failed to register TensorRTRTXBackend: {e}")
+
     # NCNN backend (placeholder)
     try:
         from .ncnn_backend import NCNNBackend
@@ -79,3 +93,12 @@ def _register_builtin_backends():
 
 # Register backends on module import
 _register_builtin_backends()
+
+
+# Populate the model-adapter registry (single source for SUPPORTED_MODELS).
+try:
+    from .adapters import register_builtin_adapters
+
+    register_builtin_adapters()
+except Exception as e:  # pragma: no cover - defensive; registry is import-light
+    logger.warning(f"Failed to register builtin adapters: {e}")

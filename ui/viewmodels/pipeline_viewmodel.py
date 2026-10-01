@@ -88,6 +88,8 @@ class PipelineViewModel(QObject):
         # Private fields - interpolation
         self._interp_enabled: bool = False
         self._model_type: str = "rife"
+        # `_checkpoint` 存放**版本令牌**（spec §7，如 "4.9"/"fp32"），
+        # 而非 checkpoint 文件名；UI 展示用的文件名由 `checkpoint` 属性派生。
         self._checkpoint: str = ""
         self._multiplier: int = 2
         self._scale: float = 1.0
@@ -123,6 +125,7 @@ class PipelineViewModel(QObject):
         interp = pipeline.get_interpolation_config()
         self._interp_enabled = interp.get("enabled", False)
         self._model_type = interp.get("model_type", "rife")
+        # config 中的 model_version 恒为版本令牌（spec §7）
         self._checkpoint = interp.get("model_version", "")
         self._multiplier = interp.get("multi", 2)
         self._scale = interp.get("scale", 1.0)
@@ -139,9 +142,10 @@ class PipelineViewModel(QObject):
         self._scene_detect_threshold = scene.get("threshold", 0.5)
         
         # Sync with ModelSelectionManager
+        # 只同步**版本令牌**：绝不用 checkpoint 文件名覆盖版本令牌（spec §7）。
         selection = self._model_selection.get_selection()
-        if selection.checkpoint_name:
-            self._checkpoint = selection.checkpoint_name
+        if selection.version:
+            self._checkpoint = selection.version
         self._model_type = selection.model_type
         
         # Get available models
@@ -166,9 +170,15 @@ class PipelineViewModel(QObject):
             self._refresh_available_checkpoints()
     
     def _on_checkpoint_changed(self, model_type: str, checkpoint: str) -> None:
-        """Handle checkpoint change from ModelSelectionManager."""
-        if checkpoint != self._checkpoint:
-            self._checkpoint = checkpoint
+        """Handle checkpoint change from ModelSelectionManager.
+
+        The manager signal carries a **checkpoint filename**; internal state keeps the
+        **version token** (spec §7). The Qt signal still emits the filename because the
+        UI combo binds to checkpoint names.
+        """
+        version = self._model_selection.checkpoint_to_version(model_type, checkpoint)
+        if version != self._checkpoint:
+            self._checkpoint = version
             self.checkpoint_changed.emit(checkpoint)
     
     def _on_available_models_changed(self) -> None:
@@ -211,8 +221,16 @@ class PipelineViewModel(QObject):
     
     @property
     def checkpoint(self) -> str:
-        """Get current checkpoint."""
-        return self._checkpoint
+        """Get current checkpoint **filename** for UI display.
+
+        Internally ``_checkpoint`` stores a version token (spec §7); this property
+        converts it back to the checkpoint filename the UI combo expects. Unknown
+        tokens are returned unchanged so the UI degrades gracefully.
+        """
+        if not self._checkpoint:
+            return ""
+        name = self._model_selection.version_to_checkpoint(self._model_type, self._checkpoint)
+        return name or self._checkpoint
     
     @property
     def multiplier(self) -> int:
@@ -304,11 +322,12 @@ class PipelineViewModel(QObject):
             self._model_selection.set_model_type(model_type)
     
     def set_checkpoint(self, checkpoint: str) -> None:
-        """Set checkpoint.
-        
-        Also updates ModelSelectionManager.
+        """Set checkpoint (filename from the UI dropdown).
+
+        Also updates ModelSelectionManager, which stores the version-token semantics.
         """
-        if checkpoint != self._checkpoint:
+        version = self._model_selection.checkpoint_to_version(self._model_type, checkpoint)
+        if version != self._checkpoint:
             self._model_selection.set_checkpoint(checkpoint)
     
     def set_multiplier(self, multiplier: int) -> None:
@@ -385,6 +404,7 @@ class PipelineViewModel(QObject):
         interp_config = {
             "enabled": self._interp_enabled,
             "model_type": self._model_type,
+            # spec §7：model_version 恒为版本令牌（self._checkpoint 即令牌）
             "model_version": self._checkpoint,
             "multi": self._multiplier,
             "scale": self._scale,
@@ -458,6 +478,7 @@ class PipelineViewModel(QObject):
             "interpolation": {
                 "enabled": self._interp_enabled,
                 "model_type": self._model_type,
+                # spec §7：输出恒为版本令牌，供后端拼接 rife_v<ver>.onnx
                 "model_version": self._checkpoint,
                 "multi": self._multiplier,
                 "scale": self._scale,

@@ -45,8 +45,8 @@ temp/
 # Output files
 output/
 
-# Models (large files)
-models/
+# Models (large files) — anchor to repo root so it does NOT match core/models/
+/models/
 *.engine
 *.onnx
 *.pth
@@ -70,6 +70,11 @@ ui_*.h
 
 # Translation compiled files (keep source .ts files)
 # locales/*.qm
+
+# Local diagnostics / scratch outputs
+batch_results.txt
+scripts/_diag2.py
+scripts/_inspect_ckpt.py
 
 # System files
 .DS_Store

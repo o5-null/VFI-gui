@@ -106,11 +106,7 @@ class ATMVFIModel(PyTorchVFIModel):
             raise RuntimeError("Model not loaded. Call load_model() first.")
 
         # Ensure batch dimension
-        squeeze_output = False
-        if frame0.dim() == 3:
-            frame0 = frame0.unsqueeze(0)
-            frame1 = frame1.unsqueeze(0)
-            squeeze_output = True
+        frame0, frame1, squeeze_output = self._squeeze_batch(frame0, frame1)
 
         # Pad to multiple of 64 (model's downsampling factor)
         padder = InputPadder(frame0.shape, divisor=64)

@@ -427,7 +427,11 @@ class TaskOrchestrator:
         # Load model if backend supports it
         _backend_any: Any = backend
         if hasattr(_backend_any, "load_model"):
-            _backend_any.load_model(processing_config.interpolation)
+            if not _backend_any.load_model(processing_config.interpolation):
+                raise RuntimeError(
+                    "Backend failed to load model: "
+                    f"{processing_config.interpolation.get('model_type')}"
+                )
 
         # Checkpoint resume support
         checkpoint_manager = CheckpointManager(backend_config.temp_dir)

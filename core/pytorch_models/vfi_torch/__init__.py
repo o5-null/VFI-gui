@@ -27,23 +27,25 @@ from .utils import (
 # 模型实现
 from .rife import RIFEModel
 from .film import FILMModel
-from .ifrnet import IFRNetModel
 from .amt import AMTModel
-from .gmfss import GMFSSModel
 from .xvfi import XVFIModel
 from .atm import ATMVFIModel
 from .momo import MoMoModel
+from .m2m import M2MVFIModel
+from .stmfnet import STMFNetModel
+from .flavr import FLAVRModel
 
 # 模型注册表
 MODEL_REGISTRY = {
     ModelType.RIFE: RIFEModel,
     ModelType.FILM: FILMModel,
-    ModelType.IFRNET: IFRNetModel,
     ModelType.AMT: AMTModel,
-    ModelType.GMFSS: GMFSSModel,
     ModelType.XVFI: XVFIModel,
     ModelType.ATM: ATMVFIModel,
     ModelType.MOMO: MoMoModel,
+    ModelType.M2M: M2MVFIModel,
+    ModelType.STMFNET: STMFNetModel,
+    ModelType.FLAVR: FLAVRModel,
 }
 
 
@@ -85,12 +87,13 @@ __all__ = [
     # 模型
     "RIFEModel",
     "FILMModel",
-    "IFRNetModel",
     "AMTModel",
-    "GMFSSModel",
     "XVFIModel",
     "ATMVFIModel",
     "MoMoModel",
+    "M2MVFIModel",
+    "STMFNetModel",
+    "FLAVRModel",
     # 工厂函数
     "get_model",
     "MODEL_REGISTRY",

@@ -19,7 +19,12 @@ typing-extensions>=4.15.0
 
 # CUDA-Specific Dependencies
 tensorrt>=10.0.0
-onnxruntime>=1.24.0
+# tensorrt-rtx: 原生 TensorRT-RTX（非 ORT EP），cu13 构建，用于 TensorRTRTXBackend
+tensorrt-rtx>=1.6.0
+# onnxruntime-gpu: PyPI 自 1.27 起默认 CUDA 13.0 构建（本机 CUDA 13.0）
+# 安装: uv pip install "onnxruntime-gpu[cuda,cudnn]"
+# 注意: 不可与 onnxruntime / onnxruntime-directml 同装（三者共用同一 onnxruntime 模块）
+onnxruntime-gpu>=1.27.0
 opencv-python>=4.13.0
 PyQt6>=6.11.0
 vapoursynth>=74

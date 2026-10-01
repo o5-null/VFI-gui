@@ -406,7 +406,11 @@ class TaskScheduler:
         # initialize() handles model loading for legacy backends)
         _backend_any: Any = self._backend
         if hasattr(_backend_any, "load_model"):
-            _backend_any.load_model(task_def.processing_config.interpolation)
+            if not _backend_any.load_model(task_def.processing_config.interpolation):
+                raise RuntimeError(
+                    "Backend failed to load model: "
+                    f"{task_def.processing_config.interpolation.get('model_type')}"
+                )
 
         # 2. Open input video
         reader = StreamingFramePairReader(
@@ -517,7 +521,7 @@ if __name__ == "__main__":
     parser.add_argument("--video", required=True, help="Input video path")
     parser.add_argument("--output", default="", help="Output video path")
     parser.add_argument(
-        "--model", default="rife", choices=["rife", "film", "amt", "ifrnet"]
+        "--model", default="rife", choices=["rife", "film", "amt"]
     )
     parser.add_argument("--version", default="4.22", help="Model version")
     parser.add_argument("--multi", type=int, default=2, help="Frame multiplier")

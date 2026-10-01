@@ -72,6 +72,7 @@ _BACKEND_EXECUTION_MODE: Dict[BackendType, str] = {
     BackendType.NCNN: "subprocess",
     BackendType.VAPOURSYNTH: "subprocess",
     BackendType.ONNX: "inprocess",
+    BackendType.TENSORRT_RTX: "inprocess",
 }
 
 

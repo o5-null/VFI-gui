@@ -26,20 +26,20 @@ from pathlib import Path
 DEFAULT_CKPTS: dict[str, str] = {
     "RIFE": "models/rife/rife47.pth",
     "FILM": "models/film/film_net_fp32.pt",
-    "IFRNET": "models/ifrnet/IFRNet_L_Vimeo90K.pth",
     "AMT": "models/amt/amt-g.pth",
     "XVFI": "models/xvfi/XVFInet_Vimeo_exp1_latest.pt",
     "ATM": "models/atm/atm-vfi-base.pt",
     "MOMO": "models/momo/momo-base.pth",
+    "M2M": "models/m2m/M2M.pth",
+    "STMFNET": "models/stmfnet/stmfnet.pth",
+    "FLAVR": "models/flavr/FLAVR_2x.pth",
 }
 
-# Models that need special config overrides.
-MODEL_SPECIAL_CONFIG: dict[str, dict] = {
-    "GMFSS": {"model_version": "fortuna", "checkpoint_path": "models/gmfss_fortuna"},
-}
+# Per-model overrides (checkpoint path, version)
+MODEL_SPECIAL_CONFIG: dict[str, dict] = {}
 
 # Models listed in ModelType but not yet registered.
-MODEL_SKIP: set = {"STMFNET", "FLAVR", "CAIN"}
+MODEL_SKIP: set = {"CAIN"}
 
 
 def _resolve_runtime_python() -> str:

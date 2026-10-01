@@ -37,6 +37,7 @@ class BackendType(Enum):
     VAPOURSYNTH = "vapoursynth"
     TORCH = "torch"
     TENSORRT = "tensorrt"
+    TENSORRT_RTX = "tensorrt_rtx"
     ONNX = "onnx"
     NCNN = "ncnn"
     DIRECTML = "directml"

@@ -159,37 +159,6 @@ MODEL_DEFINITIONS: Dict[str, Dict] = {
             ],
         },
     },
-    "ifrnet": {
-        "display_name": "IFRNet",
-        "description": "Intermediate Feature Refine Network for Efficient Frame Interpolation",
-        "info": "速度快 | 质量均衡",
-        "sort_order": 4,  # Good speed/quality balance
-        "checkpoints": {
-            "IFRNet_L_Vimeo90K.pth": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/IFRNet_L_Vimeo90K.pth",
-            ],
-            "IFRNet_S_Vimeo90K.pth": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/IFRNet_S_Vimeo90K.pth",
-            ],
-            "IFRNet_S_GoPro.pth": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/IFRNet_S_GoPro.pth",
-            ],
-            "IFRNet_L_GoPro.pth": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/IFRNet_L_GoPro.pth",
-            ],
-        },
-    },
-    "ifunet": {
-        "display_name": "IFUnet",
-        "description": "RIFE with IFUNet, FusionNet and RefineNet",
-        "info": "RIFE变体 | 细节增强",
-        "sort_order": 5,  # RIFE variant
-        "checkpoints": {
-            "IFUnet.pth": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/IFUnet.pth",
-            ],
-        },
-    },
     "m2m": {
         "display_name": "M2M",
         "description": "Many-to-many Splatting for Efficient Video Frame Interpolation",
@@ -198,35 +167,6 @@ MODEL_DEFINITIONS: Dict[str, Dict] = {
         "checkpoints": {
             "M2M.pth": [
                 "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/M2M.pth",
-            ],
-        },
-    },
-    "gmfss_fortuna": {
-        "display_name": "GMFSS Fortuna",
-        "description": "The All-In-One GMFSS for Anime Video Frame Interpolation",
-        "info": "动漫专用 | 最佳动画效果",
-        "sort_order": 7,  # Best for anime
-        "checkpoints": {
-            "GMFSS_fortuna_fusionnet.pkl": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/GMFSS_fortuna_fusionnet.pkl",
-            ],
-            "GMFSS_fortuna_feat.pkl": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/GMFSS_fortuna_feat.pkl",
-            ],
-            "GMFSS_fortuna_metric.pkl": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/GMFSS_fortuna_metric.pkl",
-            ],
-            "GMFSS_fortuna_flownet.pkl": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/GMFSS_fortuna_flownet.pkl",
-            ],
-            "GMFSS_fortuna_union_fusionnet.pkl": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/GMFSS_fortuna_union_fusionnet.pkl",
-            ],
-            "GMFSS_fortuna_union_feat.pkl": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/GMFSS_fortuna_union_feat.pkl",
-            ],
-            "GMFSS_fortuna_union_metric.pkl": [
-                "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/releases/download/models/GMFSS_fortuna_union_metric.pkl",
             ],
         },
     },
@@ -319,35 +259,52 @@ MODEL_DEFINITIONS: Dict[str, Dict] = {
 }
 
 
-# Checkpoint to version string mapping
-# Maps checkpoint filenames to user-friendly version strings
-CHECKPOINT_VERSION_MAP: Dict[str, Dict[str, str]] = {
-    "rife": {
-        "rife47.pth": "4.7",
-        "rife49.pth": "4.9",
-        "rife417.pth": "4.17",
-        "rife426.pth": "4.26",
-    },
-    "film": {
-        "film_net_fp32.pt": "fp32",
-    },
-    "ifrnet": {
-        "IFRNet_S_Vimeo90K.pth": "S_Vimeo90K",
-        "IFRNet_L_Vimeo90K.pth": "L_Vimeo90K",
-    },
-    "amt": {
-        "amt-s.pth": "s",
-        "amt-g.pth": "g",
-    },
-}
+# =============================================================================
+# Version / checkpoint 映射（spec §7：`model_version` ≡ 版本令牌）
+#
+# 单一真相源是 core/models/asset_resolver.py。此处从它派生 / re-export，
+# 保留旧名字供既有调用方使用（向后兼容），不再自行维护独立事实。
+# asset_resolver 由并行开发任务引入；过渡期导入失败时回退到内联默认值，
+# 避免在两者合并落地前中断模块导入。
+# =============================================================================
+try:
+    from core.models.asset_resolver import (
+        MODEL_ASSET_TABLE as _MODEL_ASSET_TABLE,
+        DEFAULT_VERSIONS as _ASSET_RESOLVER_DEFAULT_VERSIONS,
+    )
 
-# Default versions for each model type when no version is specified
-DEFAULT_VERSIONS: Dict[str, str] = {
-    "rife": "4.22",
-    "film": "fp32",
-    "ifrnet": "L_Vimeo90K",
-    "amt": "s",
-}
+    # checkpoint 文件名 -> 版本令牌（由 MODEL_ASSET_TABLE 派生，跳过无 checkpoint 的项）
+    CHECKPOINT_VERSION_MAP: Dict[str, Dict[str, str]] = {
+        model_type: {
+            str(asset["checkpoint"]): version
+            for version, asset in versions.items()
+            if asset.get("checkpoint")
+        }
+        for model_type, versions in _MODEL_ASSET_TABLE.items()
+    }
+    # 各模型类型的默认版本令牌（spec §4：合并自 model_manager.DEFAULT_VERSIONS）
+    DEFAULT_VERSIONS: Dict[str, str] = dict(_ASSET_RESOLVER_DEFAULT_VERSIONS)
+except Exception:  # pragma: no cover - 过渡期回退，asset_resolver 落地后不会触发
+    CHECKPOINT_VERSION_MAP = {
+        "rife": {
+            "rife47.pth": "4.7",
+            "rife49.pth": "4.9",
+            "rife417.pth": "4.17",
+            "rife426.pth": "4.26",
+        },
+        "film": {
+            "film_net_fp32.pt": "fp32",
+        },
+        "amt": {
+            "amt-s.pth": "s",
+            "amt-g.pth": "g",
+        },
+    }
+    DEFAULT_VERSIONS = {
+        "rife": "4.22",
+        "film": "fp32",
+        "amt": "s",
+    }
 
 
 class ModelManager:
